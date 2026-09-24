@@ -1,17 +1,19 @@
 <!doctype html>
 <html lang="he" dir="rtl">
 <head>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0d6efd">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="מ״ג תורן">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230d6efd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><rect x='8' y='2' width='8' height='4' rx='1' ry='1'/><path d='m9 14 2 2 4-4'/></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230d6efd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2'/><rect x='8' y='2' width='8' height='4' rx='1' ry='1'/><path d='m9 14 2 2 4-4'/></svg>"> 
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d6efd">
 <meta name="color-scheme" content="light dark">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%232f6d4e'/%3E%3Cg stroke='white' stroke-width='5' fill='none'%3E%3Ccircle cx='32' cy='32' r='9'/%3E%3Cpath d='M32 8v7M32 49v7M8 32h7M49 32h7M15 15l5 5M44 44l5 5M49 15l-5 5M20 44l-5 5'/%3E%3C/g%3E%3C/svg%3E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="מ״ג תורן">
+<meta name="application-name" content="מ״ג תורן">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='13'%20fill='%232f6d4e'/%3E%3Cg%20stroke='%23fff'%20stroke-linecap='round'%20fill='none'%3E%3Cpath%20stroke-width='4.25'%20d='M32.00%2017.25L32.00%208.25M42.43%2021.57L48.79%2015.21M46.75%2032.00L55.75%2032.00M42.43%2042.43L48.79%2048.79M32.00%2046.75L32.00%2055.75M21.57%2042.43L15.21%2048.79M17.25%2032.00L8.25%2032.00M21.57%2021.57L15.21%2015.21'/%3E%3Ccircle%20cx='32'%20cy='32'%20r='9.75'%20stroke-width='3.75'/%3E%3C/g%3E%3C/svg%3E">
 <title>צ׳ק ליסט מ״ג תורן</title>
 <style>
 :root{
@@ -115,6 +117,11 @@ textarea{resize:vertical; min-height:56px}
 .chip.on.s-gray{background:var(--muted); border-color:var(--muted); color:#fff}
 .chip.small{padding:5px 10px; font-size:12.5px}
 .chip.varsug{border-style:dashed; border-color:var(--accent)}
+.chip.splitsug{border-style:dotted; border-width:2px; border-color:var(--info)}
+.chip.ghostchip{opacity:.9; font-weight:700}
+.addsug{display:inline-flex; gap:6px; align-items:center}
+.addsug input{padding:7px 9px; border-radius:10px; border:1px solid var(--line);
+  background:color-mix(in srgb,var(--card) 88%, var(--bg)); color:var(--ink); font-size:14px; min-width:170px}
 
 /* ---------- list items ---------- */
 .item{
@@ -137,6 +144,28 @@ input.tinput{
 input.tinput:hover{border-color:var(--line)}
 input.tinput:focus{background:color-mix(in srgb,var(--card) 88%, var(--bg)); border-color:var(--accent)}
 .item .hintline{font-size:12px; color:var(--muted); margin:2px 0 8px}
+.namesbar{display:flex; align-items:center; justify-content:space-between; gap:8px; margin:6px 0 10px}
+.namecloud{display:flex; flex-wrap:wrap; gap:6px}
+.namechip{display:inline-flex; align-items:center; gap:6px; background:var(--accent-soft); color:var(--ink);
+  border:1px solid color-mix(in srgb,var(--accent) 28%, var(--line)); border-radius:999px;
+  padding:5px 6px 5px 12px; font-size:13.5px; font-weight:700}
+.namechip.base{border-style:dashed}
+.namechip button{width:20px; height:20px; border-radius:50%; border:0; cursor:pointer; font-weight:800; font-size:13px;
+  background:color-mix(in srgb,var(--bad) 12%, transparent); color:var(--bad); line-height:1}
+.namechip button:hover{background:color-mix(in srgb,var(--bad) 24%, transparent)}
+.namesempty{border:1px dashed var(--line); border-radius:12px; padding:14px; text-align:center; color:var(--muted); font-size:13.5px}
+.bulk{margin-top:12px}
+.bulk summary{cursor:pointer; font-weight:700; font-size:13.5px; padding:8px 0}
+.bulk textarea{width:100%; padding:10px; border-radius:10px; border:1px solid var(--line);
+  background:color-mix(in srgb,var(--card) 88%, var(--bg)); color:var(--ink); font-size:14px; font-family:inherit}
+#nameAdd{padding:9px 11px; border-radius:10px; border:1px solid var(--line);
+  background:color-mix(in srgb,var(--card) 88%, var(--bg)); color:var(--ink); font-size:15px; flex:1 1 160px}
+.card.flash{animation:flashcard 1.6s ease}
+@keyframes flashcard{0%,100%{box-shadow:0 0 0 0 rgba(13,110,253,0)} 25%,75%{box-shadow:0 0 0 4px rgba(13,110,253,.35)}}
+.vehlock{font-size:13.5px; font-weight:700; color:var(--warn); margin-bottom:8px; padding:8px 10px;
+  border-radius:10px; background:var(--warn-soft); border:1px solid color-mix(in srgb,var(--warn) 32%, var(--line))}
+.vehlock b{color:var(--ink); font-weight:800}
+.vehlock .mut{font-weight:600}
 .item .opts{margin-bottom:8px}
 .fields{display:grid; grid-template-columns:1fr 1fr; gap:8px}
 @media (max-width:560px){ .fields{grid-template-columns:1fr} }
@@ -258,16 +287,6 @@ label.btn{display:inline-flex; align-items:center; justify-content:center}
 }
 </style>
 </head>
-<!-- Service Worker Registration -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js')
-        .then((reg) => console.log('Service Worker registered successfully:', reg.scope))
-        .catch((err) => console.error('Service Worker registration failed:', err));
-    });
-  }
-</script>
 <body>
 
 <header class="appbar">
@@ -348,7 +367,6 @@ label.btn{display:inline-flex; align-items:center; justify-content:center}
       <div class="prog"><i id="progBar"></i></div>
       <div class="progtxt" id="progTxt">0 / 0 בוצעו</div>
       <div class="row-inline" style="margin:10px 0 4px">
-        <button class="btn small ghost" id="allDone">סמן הכל „בוצע”</button>
         <button class="btn small ghost" id="addTask">+ הוספת סעיף</button>
       </div>
       <div id="tasksFill" style="margin-top:8px"></div>
@@ -357,7 +375,7 @@ label.btn{display:inline-flex; align-items:center; justify-content:center}
     <div class="card">
       <h2>נעילת רכבים ווידוא חניה</h2>
       <div class="row-inline" style="margin:8px 0 10px">
-        <button class="btn small ghost" id="allParked">סמן הכל „חניה”</button>
+        <button class="btn small ghost" id="allParked">↩️ איפוס מיקומים לחניה</button>
         <button class="btn small ghost" id="addVeh">+ הוספת רכב</button>
       </div>
       <div id="vehFill"></div>
@@ -365,7 +383,7 @@ label.btn{display:inline-flex; align-items:center; justify-content:center}
 
     <div class="card">
       <h2>סוף יום</h2>
-      <div class="field"><span>תקלות בלילה</span>
+      <div class="field"><span>תקלות אחרי שעות העבודה</span>
         <div class="chips" data-chips="night.value" data-options="אין|יש"></div>
       </div>
       <div class="condbox" data-cond="night.value:יש" hidden>
@@ -400,6 +418,9 @@ label.btn{display:inline-flex; align-items:center; justify-content:center}
     <div class="card">
       <h2>סריקת תמונת הכוננים <span class="hint">מילוי אוטומטי</span></h2>
       <div class="lead">מעלים את התמונה היומית שקיבלתם — האפליקציה מזהה את השמות וממלאת את הכוננים. לפני ההחלה תמיד תוכלו לבדוק ולתקן.</div>
+      <div class="row-inline" style="margin-bottom:10px">
+        <button class="btn small ghost" id="manageNames">🖊️ ניהול שמות לזיהוי <span class="hint" id="namesMiniCount"></span></button>
+      </div>
 
       <label class="drop" id="drop" for="fileInput">
         <div class="drop-in">
@@ -542,6 +563,34 @@ label.btn{display:inline-flex; align-items:center; justify-content:center}
         <button class="btn small ghost" id="addRoster">+ הוספת תפקיד</button>
         <button class="btn small primary" id="saveTemplate">שמור כתבנית קבועה</button>
         <button class="btn small" id="resetTemplate">איפוס לברירת מחדל</button>
+      </div>
+    </div>
+
+    <div class="card" id="namesCard">
+      <h2>שמות לזיהוי בסריקה <span class="hint">מאגר השמות</span></h2>
+      <div class="lead">
+        כל שם שמופיע כאן עוזר לסריקת התמונה לזהות מי הכונן — וגם מתקן אוטומטית שמות שזוהו קרוב.
+        הוסיפו כאן את כל מי שמשמש בתפקידים בגף (כולל שמות משפחה כמו „נרדי").
+      </div>
+      <div class="namesbar">
+        <span class="mut" id="namesCount">—</span>
+        <button class="btn small ghost" id="namesReset">↩️ החזרת ברירת המחדל</button>
+      </div>
+      <div id="namesList" class="namecloud"></div>
+      <div class="row-inline" style="margin-top:12px">
+        <input type="text" id="nameAdd" placeholder="הוספת שם (למשל: נרדי)" autocomplete="off">
+        <button class="btn small primary" id="nameAddBtn">הוספה</button>
+      </div>
+      <details class="bulk">
+        <summary>הוספה מרובה — הדבקת רשימת שמות</summary>
+        <textarea id="namesBulk" rows="4" placeholder="שם בכל שורה, או מופרד בפסיק / רווח&#10;למשל:&nbsp;ירין, אביתר, ליאור, רייבן"></textarea>
+        <div class="row-inline" style="margin-top:8px">
+          <button class="btn small" id="namesBulkBtn">הוספת כל השמות</button>
+          <span class="mut" id="bulkMsg"></span>
+        </div>
+      </details>
+      <div class="mut" style="font-size:12px; margin-top:10px">
+        שמות שנוספו נשמרים במכשיר (לא נשלחים לשום מקום). „החזרת ברירת המחדל” מחזירה רק שמות שהסרתם.
       </div>
     </div>
 
@@ -852,24 +901,26 @@ const DEFAULT_TASKS = [
 ];
 
 const DEFAULT_VEHICLES = [
-  { id:"v1", name:"חשמלית",  location:"חניה", note:"", owner:"" },
-  { id:"v2", name:"אוטובוס", location:"חניה", note:"", owner:"" },
-  { id:"v3", name:"דודג׳",   location:"חניה", note:"", owner:"" },
-  { id:"v4", name:"פיקו 106", location:"תובלות", note:"", owner:"" },
-  { id:"v5", name:"פיקו 173", location:"חניה", note:"", owner:"" },
-  { id:"v6", name:"פיקו 174", location:"חניה", note:"", owner:"" },
-  { id:"v7", name:"פולאריס", location:"צומת", note:"", fault:"תקול", faultWhere:"במיקום אחר", faultWhereText:"צומת", faultNote:"לא מתניעה — מפתחות בגף", owner:"" }
+  { id:"v1", name:"חשמלית",  location:"חניה",  defLocation:"חניה",  note:"", owner:"" },
+  { id:"v2", name:"אוטובוס", location:"חניה",  defLocation:"חניה",  note:"", owner:"" },
+  { id:"v3", name:"דודג׳",   location:"חניה",  defLocation:"חניה",  note:"", owner:"" },
+  { id:"v4", name:"פיקו 106", location:"חניה",  defLocation:"חניה",  note:"", owner:"" },
+  { id:"v5", name:"פיקו 173", location:"חניה",  defLocation:"חניה",  note:"", owner:"" },
+  { id:"v6", name:"פיקו 174", location:"חניה",  defLocation:"חניה",  note:"", owner:"" },
+  { id:"v7", name:"פולאריס", location:"חניה",  defLocation:"חניה",  note:"", fault:"תקול", faultWhere:"במיקום אחר", faultWhereText:"צומת", faultNote:"לא מתניעה — מפתחות בגף", owner:"" }
 ];
 
 const STATUS_OPTIONS = ["בוצע","לא בוצע","לא נדרש","תקול","בטיפול"];
 /* „תקול” ניתן לסמן רק על חתימת מערכת כיבוי האש (בגף ובצומת) */
 const isFireSignTask = t => /כיבוי\s*אש/.test(String((t && t.title) || ""));
+/* ברירת מחדל לשאלות היום — מסומן מראש „אין/לא” כדי שלא יישאר ריק בטעות */
+const YN_DEFAULTS = { events:"אין", planned:"אין", vehicle17:"לא", night:"אין" };
 const FAULT_OPTIONS = ["בגף","בצומת","בשניהם"];
 /* תקול ברכב: איפה התקלה + הערה שנזכרת לפעם הבאה */
 const VEH_FAULT_WHERE = ["בגף רכב","במיקום אחר"];
 const K_VEHFIX = "magToran.vehFaults.v1";
-const APP_VERSION = "23/09/2026 · עדכון 3";
-const VERSION_NOTES = "שם רכב ניתן לעריכה והוספה · שחזור תקלה קודמת של רכב · תקול לרכבים · נעילת רכבים ווידוא חניה";
+const APP_VERSION = "24/09/2026 · עדכון 7";
+const VERSION_NOTES = "זיהוי משופר: הפרדת שם מודבק אוטומטית (רוןד ← רון ד · חינרדי ← חי נרדי), תיקון שגיאת תו אחת (פדיקס ← פליקס), שמות נוספים במאגר · מאגר שמות לזיהוי — מסך ניהול בהגדרות + קיצור מהסריקה · תיקון אוטומטי של שמות לפי המאגר · איפוס רכבים: כולם לחניה מלבד רכב תקול · עדכון עצמי מהאתר (לא נתקעים על גרסה ישנה) · בוטל „סמן הכל בוצע” · „תקלות בלילה” ← „תקלות אחרי שעות העבודה” · הצעות פיצול לשמות שהודבקו (חינרדי ← חי נרדי) · הוספת הצעות ידנית בסריקה · רכב תקול מציג את מקום התקלה במקום חניה · ברירת מחדל: אין אירועים / לא אירוע מתוכנן / לא רכב אחרי 17 / אין תקלות · כל הרכבים חוזרים לחניה (פיקו 106 — תובלות)";
 const vehFaultMem = () => storage.get(K_VEHFIX, {});
 const isVehFaulty = v => clean(v && v.fault) === "תקול";
 const statusOptionsFor = t => isFireSignTask(t) ? STATUS_OPTIONS : STATUS_OPTIONS.filter(x => x !== "תקול");
@@ -877,7 +928,8 @@ const LOCATION_OPTIONS = ["חניה","סככה","תובלות","מגורים ק�
 const FREE_LOCATIONS = ["חניה","סככה"];            // מיקומים שלא דורשים „אצל מי”
 const needsOwner = loc => { const l = clean(loc); return !!l && FREE_LOCATIONS.indexOf(l) < 0; };
 
-const PEOPLE = ["מקסים","דניאל","שלו","חיים","ינון","עמית","צ׳ארלס","רון דולמן","יאיר נסימי","יאיר דניאל","ינון סטמקר","טל","ספיר"];
+const PEOPLE = ["מקסים","דניאל","שלו","חיים","ינון","עמית","צ׳ארלס","רון דולמן","יאיר נסימי","יאיר דניאל","ינון סטמקר","טל","ספיר",
+                "פליקס","רועי","איתי","דולב","רייבן","ליאור","אביתר","ירין","חי","נרדי","רון","יאיר","מטתא"];
 
 const uid = p => p + Math.random().toString(36).slice(2, 8);
 
@@ -905,10 +957,10 @@ function newState(tpl) {
     operation: "",
     operationManual: false,
     operationAuto: true,
-    events:  { value:"", detail:"" },
-    planned: { value:"", detail:"" },
-    vehicle17:{ value:"", detail:"" },
-    night:   { value:"", detail:"" },
+    events:  { value: YN_DEFAULTS.events,  detail:"" },
+    planned: { value: YN_DEFAULTS.planned, detail:"" },
+    vehicle17:{ value: YN_DEFAULTS.vehicle17, detail:"" },
+    night:   { value: YN_DEFAULTS.night,   detail:"" },
     notes: "",
     roster: clone(t.roster).map(r => ({ id: r.id || uid("r"), label: r.label, name: "" })),   // תמיד מתחילים בלי שמות
     contacts: clone(t.contacts),
@@ -989,6 +1041,7 @@ function toast(msg) {
    זיהוי כוננים מתמונה (OCR בעברית) + פענוח טקסט
    ========================================================= */
 const K_NAMES = "magToran.names.v1";
+const K_HIDDEN = "magToran.hiddenNames.v1";   // שמות שהוסרו ידנית מהמאגר
 const K_FIX = "magToran.nameFixes.v1";
 const K_CLEAR_OPEN = "magToran.clearRosterOnOpen.v1";
 const K_CONTACTS = "magToran.contactsEnabled.v1";
@@ -996,6 +1049,7 @@ let contactsEnabled = storage.get(K_CONTACTS, false);   // זיהוי טלפונ
 let clearRosterOnOpen = storage.get(K_CLEAR_OPEN, true);   // ברירת מחדל: כוננים ריקים בכניסה
 let nameFixes = storage.get(K_FIX, {});
 let learnedNames = storage.get(K_NAMES, []);
+let hiddenNames  = storage.get(K_HIDDEN, []);
 
 const FINALS = { 'ך':'כ','ם':'מ','ן':'נ','ף':'פ','ץ':'צ' };
 function pNorm(s){
@@ -1243,6 +1297,20 @@ function nameVariants(name){
   return [...out];
 }
 
+/* „יאיר דניאל” עבור „דניאל” — זו הארכה, לא תיקון. לא מציעים אותה. */
+function isNameExtension(sug, value){
+  const w = x => clean(x).split(/\s+/).filter(Boolean);
+  const a = w(sug), b = w(value);
+  if (!a.length || !b.length || a.length === b.length) return false;
+  const isSub = (small, big) => {
+    for (let i = 0; i + small.length <= big.length; i++){
+      if (small.every((x, j) => pSquash(x) === pSquash(big[i + j]))) return true;
+    }
+    return false;
+  };
+  return isSub(b, a) || isSub(a, b);
+}
+
 function suggestNames(name, dict, max){
   const vars = nameVariants(name);
   const cands = new Map();
@@ -1286,6 +1354,48 @@ function suggestNames(name, dict, max){
   return arr.slice(0, max || 3);
 }
 
+/* פיצול שם שהודבק יחד: „חינרדי” → „חי נרדי”.
+   נותן עד 3 הצעות, לפי כמה כל חלק מוכר במאגר השמות. */
+function splitCandidates(name, dict){
+  const t = clean(name);
+  if (!t || t.indexOf(" ") >= 0 || t.indexOf("+") >= 0 || t.length < 4) return [];
+  const pool = [...new Set((dict || []).map(clean).filter(Boolean))];
+  const scoreOf = part => {
+    let best = 0;
+    pool.forEach(d => {
+      let s = pSim(part, d);
+      const dParts = d.split(/\s+/);
+      if (dParts.indexOf(part) >= 0) s = Math.max(s, 1);                 // „חי” הוא שם שלם במאגר
+      else if (d.indexOf(part) === 0 && part.length >= 2) s = Math.max(s, 0.86);   // „חי” = תחילת „חיים”
+      else if (part.length >= 3 && d.length > part.length + 1 && d.indexOf(part) > 0) s = Math.max(s, 0.78);
+      if (s > best) best = s;
+    });
+    return best;
+  };
+  /* אם אותו שם כבר נלמד בעבר בצורתו המופרדת („חי נרדי”) — זו ההצעה החזקה ביותר */
+  const squash = pSquash(t);
+  const exact = pool.filter(d => pSquash(d) === squash && d !== t)
+                    .map(d => ({ name:d, score:1, split:true }));
+  if (exact.length) return exact.slice(0, 2);
+
+  const knownWhole = scoreOf(t);
+  const raw = [];
+  for (let i = 2; i <= t.length - 2; i++){
+    const a = t.slice(0, i), b = t.slice(i);
+    const sa = scoreOf(a), sb = scoreOf(b);
+    const strong = sa >= 0.86 && sb >= 0.86;                       // שני החלקים מוכרים — כמעט בוודאות הודבקו
+    /* אחרת: לפחות חלק אחד חייב להיות שם מוכר ממש (תחילת שם/שם שלם במאגר) */
+    if (!strong && (Math.max(sa, sb) < 0.8 || Math.min(sa, sb) < 0.3)) continue;
+    if (knownWhole >= 0.9) continue;                               // השם שלם ומוכר היטב — לא מפצלים
+    const pair = Math.max(sa, sb) * 0.6 + Math.min(sa, sb) * 0.4;
+    raw.push({ name: a + " " + b, score: strong ? 0.95 : Math.min(0.86, 0.6 + pair * 0.25), split:true });
+  }
+  raw.sort((x, y) => y.score - x.score);
+  const seen = new Set(), out = [];
+  raw.forEach(o => { if (!seen.has(o.name)){ seen.add(o.name); out.push(o); } });
+  return out.slice(0, 2);
+}
+
 /* וריאציה מוצעת רק אם החלק שלפני האות האחרונה מתאים לתחילת שם מוכר במאגר
    (למשל „רוןד” → „רון ד”, כי קיים „רון דולמן”) */
 function plausibleVariant(variant, original, dict){
@@ -1302,6 +1412,78 @@ function plausibleVariant(variant, original, dict){
     if (known) return true;
   }
   return false;
+}
+
+/* ---- תיקון חכם לפי מאגר השמות ----
+   סדר העדפות: (1) תיקון שנלמד בעבר  (2) הפרדת אות אחרונה שנדבקה („רוןד” ← „רון ד”)
+   (3) פיצול לשני שמות מוכרים („חינרדי” ← „חי נרדי”)  (4) שגיאת תו אחת („פדיקס” ← „פליקס”) */
+function trailingSplit(name, dict){
+  const t = clean(name);
+  const m = t.match(/^([\u05D0-\u05EA]{3,})([\u05D0-\u05EA])$/);
+  if (!m) return null;
+  const prefix = m[1];
+  const known = (dict || []).some(d => {
+    const dc = clean(d);
+    return dc === prefix || dc === prefix + " " + m[2] || dc.indexOf(prefix + " ") === 0;
+  });
+  return known ? prefix + " " + m[2] : null;
+}
+
+/* שם שזוהה שונה מהשם המוכר רק בסימני פיסוק/רווחים — לא באמת „תיקון” */
+function sameAfterNormalize(a, b){
+  const n = x => clean(x).replace(/[׳’'`]/g, "'");
+  return n(a) === n(b);
+}
+
+function smartFix(name, dict){
+  const t = clean(name);
+  if (!t) return null;
+  const learned = applyLearnedFix(t);
+  if (learned) return { value: learned, how: "learned" };
+  if (t.indexOf(" ") < 0 && t.indexOf("+") < 0){
+    const sp = t.indexOf("+") >= 0 ? null : trailingSplit(t, dict);
+    if (sp && clean(sp) !== t) return { value: sp, how: "split" };
+  }
+  /* פיצול לשני שמות מוכרים */
+  const cands = splitCandidates(t, dict);
+  const strong = cands.find(c => c.score >= 0.93);
+  if (strong && clean(strong.name) !== t) return { value: strong.name, how: "split" };
+  /* גם שם עם „+” — מפצלים כל חלק שלפניו מודבקת אות */
+  if (/\+/.test(t)){
+    const parts = t.split(/\s*\+\s*/).map(x => x.trim());
+    const fixedParts = parts.map(x => trailingSplit(x, dict) || x);
+    const joined = fixedParts.join(" + ");
+    if (clean(joined) !== t) return { value: joined, how: "split" };
+  }
+  const fix = autoCorrectFromDict(t);
+  if (fix && clean(fix) !== t) return { value: fix, how: "dict" };
+  return null;
+}
+
+/* ---- תיקון אוטומטי לפי מאגר השמות ----
+   שם שזוהה קרוב מאוד לשם מוכר (והשם המוכר באותו אורך בערך) — מתוקן לבד,
+   כך שהמאגר עוזר ל-OCR „להבין” מי נמצא בכוננים. תמיד אפשר לשנות במסך הבדיקה. */
+function autoCorrectFromDict(name){
+  const t = clean(name);
+  if (!t) return null;
+  const dict = nameDictionary();
+  if (!dict.length) return null;
+  const key = pSquash(t);
+  const same = dict.find(d => pSquash(d) === key && clean(d) !== t);
+  if (same) return same;                                  // אותו שם עם רווח/איות שונה
+  if (key.length < 3) return null;                        // שמות קצרים מדי — לא מתקנים
+  let best = null;
+  dict.forEach(d => {
+    const dc = clean(d);
+    if (dc.startsWith(t + " ")) return;                   // לא „מרחיבים” שם קצר לשם מלא
+    const dk = pSquash(dc);
+    if (Math.abs(dk.length - key.length) > 1) return;
+    const diff = lev(key, dk);
+    if (diff > 1) return;                                 // שגיאת תו אחד בלבד — למשל „נרד” → „נרדי”
+    const sc = pSim(t, dc);
+    if (!best || sc > best.score) best = { name: dc, score: sc };
+  });
+  return best ? best.name : null;
 }
 
 /* ---- תיקונים נלמדים: „מה שהסריקה קראה” → „מה שאישרת” ---- */
@@ -1322,12 +1504,56 @@ function rememberFix(detected, approved){
 
 function nameDictionary(){
   const set = new Set();
-  const push = n => { const c = clean(n); if (c) set.add(c); };
+  const push = n => { const c = clean(n); if (c && !hiddenNames.includes(c)) set.add(c); };
   PEOPLE.forEach(push); learnedNames.forEach(push);
   state.roster.forEach(r => push(r.name));
   state.tasks.forEach(t => push(t.who));
-  hist.forEach(h => { if (h.state && h.state.roster) h.state.roster.forEach(r => push(r.name)); });
+  if (typeof hist !== "undefined" && hist) hist.forEach(h => { if (h.state && h.state.roster) h.state.roster.forEach(r => push(r.name)); });
   return [...set];
+}
+
+/* ---------- ניהול מאגר השמות („מי נמצא בכוננים”) ---------- */
+const namesFromLearned = () => [...new Set(learnedNames.map(clean).filter(Boolean))];
+
+function addNamesFromText(txt){
+  const parts = String(txt || "").split(/\\n|[\n,;،\t]+|\s{2,}/).map(clean).filter(Boolean);
+  let added = 0, dup = 0, tooShort = 0;
+  parts.forEach(n => {
+    const name = n.replace(/^[-•*]+\s*/, "");
+    if (!name) return;
+    if (name.length < 2){ tooShort++; return; }
+    const key = pSquash(name);
+    const exists = nameDictionary().some(d => pSquash(d) === key);
+    if (exists){ dup++; return; }
+    learnedNames.push(name);
+    const hi = hiddenNames.indexOf(name);
+    if (hi >= 0) hiddenNames.splice(hi, 1);
+    added++;
+  });
+  if (learnedNames.length > 400) learnedNames = learnedNames.slice(-400);
+  if (added){
+    storage.set(K_NAMES, learnedNames);
+    storage.set(K_HIDDEN, hiddenNames);
+    /* אם הסריקה פתוחה — מרעננים את ההצעות */
+    if (scanParsed && typeof renderReview === "function") renderReview();
+    if (typeof renderNamesEdit === "function") renderNamesEdit();
+  }
+  return { added, dup, tooShort };
+}
+
+function removeNameFromDict(name){
+  const c = clean(name);
+  if (!c) return false;
+  if (!hiddenNames.includes(c)) hiddenNames.push(c);   // „מוסתר” — וכך אפשר להחזיר אותו בעת הצורך
+  storage.set(K_HIDDEN, hiddenNames);
+  if (scanParsed && typeof renderReview === "function") renderReview();
+  return true;
+}
+
+function resetNameDictionary(){
+  hiddenNames = [];
+  storage.set(K_HIDDEN, hiddenNames);
+  if (scanParsed && typeof renderReview === "function") renderReview();
 }
 function rememberNames(list){
   let changed = false;
@@ -1924,14 +2150,18 @@ function handleParsed(parsed, source){
   const rows = state.roster.map((role, i) => {
     const r = found.get(i);
     const detected = r ? clean(r.name) : "";
-    const learned = detected ? applyLearnedFix(detected) : null;
-    const value = learned || detected;
+    const fix = detected ? smartFix(detected, dict) : null;
+    const value = fix ? fix.value : detected;
     const variants = value ? nameVariants(value).filter(v => clean(v) !== clean(value) && plausibleVariant(v, value, dict)) : [];
     const varSug = variants.map(v => ({ name:v, score:0.72, variant:true }));
-    const sug = value ? varSug.concat(suggestNames(value, dict, 3)) : [];
+    const splitSug = value ? splitCandidates(value, dict) : [];
+    const sug = (value ? varSug.concat(splitSug, suggestNames(value, dict, 3)) : [])
+      .filter(x => pSquash(x.name) !== pSquash(value))       // לא מציעים את מה שכבר בשדה
+      .filter(x => !isNameExtension(x.name, value));         // ולא „הארכות” של שם תקין („דניאל” ⇒ „יאיר דניאל”)
     return {
       index: i, label: role.label, value, raw: r ? r.raw : "", byOrder: r ? !!r.byOrder : false,
-      detected, learned: !!learned, missing: !r,
+      detected, missing: !r,
+      fixHow: fix && !sameAfterNormalize(fix.value, detected) ? fix.how : "",   // לא מסמנים „תיקון” על אותו שם
       suggestions: sug.filter(x => x.score >= 0.68), include: true
     };
   });
@@ -1994,7 +2224,13 @@ function renderReview(){
       <div class="rlabel">${esc(r.label)}
         ${r.byOrder ? ' <span class="mut">(שויך לפי סדר)</span>' : ""}
         ${r.missing ? '<span class="missmark">לא זוהה בתמונה — מלאו ידנית</span>' : ""}
-        ${r.learned ? `<span class="fixmark">תוקן אוטומטית (סריקה קראה: ${esc(r.detected)})</span>` : ""}</div>
+        ${(function(){
+            if (!r.fixHow) return "";
+            const why = r.fixHow === "learned" ? "תוקן אוטומטית"
+                      : (r.fixHow === "split" ? "הופרד לשני חלקים"
+                      : "תוקן לפי מאגר השמות");
+            return `<span class="fixmark">${why} (סריקה קראה: ${esc(r.detected)})</span>`;
+          })()}</div>
       <div class="line">
         <input type="text" data-rev="${i}" list="dictList" value="${esc(r.value)}" placeholder="${r.missing ? "שם הכונן (לא זוהה)" : "שם הכונן"}">
         <label class="mut" style="display:flex;gap:6px;align-items:center">
@@ -2002,9 +2238,17 @@ function renderReview(){
         </label>
       </div>
       ${r.suggestions.length ? `<div class="sug"><span class="mut">הצעות:</span>
-        ${r.suggestions.map(s => `<button type="button" class="chip small ${s.variant ? 'varsug' : ''}" data-rev-sug="${i}" data-sug="${esc(s.name)}"
-            title="${s.variant ? 'הפרדת אות אחרונה (למשל רוןד ← רון ד)' : 'שם דומה מהמאגר'}">${esc(s.name)}</button>`).join("")}
+        ${r.suggestions.map(s => `<button type="button" class="chip small ${s.variant ? 'varsug' : ''} ${s.split ? 'splitsug' : ''}" data-rev-sug="${i}" data-sug="${esc(s.name)}"
+            title="${s.split ? 'ייתכן ששני חלקי שם הודבקו יחד' : (s.variant ? 'הפרדת אות אחרונה (למשל רוןד ← רון ד)' : 'שם דומה מהמאגר')}">${esc(s.name)}</button>`).join("")}
       </div>` : ""}
+      ${r.suggestions.some(x => x.split) ? `<div class="rraw">שימו לב: ייתכן ששני חלקי השם הודבקו יחד — נסו את הצעת הפיצול.</div>` : ""}
+      <div class="sug">
+        <button type="button" class="chip small ghostchip" data-rev-addsug="${i}">+ הוספת הצעה</button>
+        <span class="addsug" data-addsugbox="${i}" hidden>
+          <input type="text" data-rev-newsug="${i}" placeholder="כתבו שם להוספה להצעות" autocomplete="off">
+          <button type="button" class="chip small" data-rev-addsug-save="${i}">הוספה</button>
+        </span>
+      </div>
       ${r.raw ? `<div class="rraw">זוהה מהשורה: ${esc(r.raw)}</div>` : ""}
     </div>`).join("");
 
@@ -2204,6 +2448,28 @@ function renderManualRoster(){
     return true;
   }
   pick("reviewBody").addEventListener("click", e => {
+    const addSugBtn = e.target.closest("[data-rev-addsug]");
+    if (addSugBtn){
+      const box = document.querySelector(`[data-addsugbox="${addSugBtn.dataset.revAddsug}"]`);
+      if (box){ box.hidden = false; const inp = box.querySelector("input"); if (inp){ try { inp.focus(); } catch (e) {} } }
+      return;
+    }
+    const addSugSave = e.target.closest("[data-rev-addsug-save]");
+    if (addSugSave){
+      const i = +addSugSave.dataset.revAddsugSave;
+      const inp = document.querySelector(`[data-rev-newsug="${i}"]`);
+      const nm = clean(inp ? inp.value : "");
+      if (!nm){ toast("כתבו שם ואז הקישו „הוספה”"); return; }
+      const row = scanParsed && scanParsed.rows[i];
+      if (row){
+        if (!row.suggestions.some(x => clean(x.name) === nm)) row.suggestions.push({ name:nm, score:1 });
+        if (!clean(row.value)) row.value = nm;                  // שם ריק — ממלאים מיד
+      }
+      rememberNames([nm]);                                      // נשמר למאגר — יוצע בסריקות הבאות
+      renderReview();
+      toast("ההצעה נוספה ונשמרה למאגר השמות");
+      return;
+    }
     const sug = e.target.closest("[data-rev-sug]");
     if (sug){ pickSuggestion("[data-rev-sug]", `[data-rev="${sug.dataset.revSug}"]`, sug); return; }
     const calt = e.target.closest("[data-rev-calt]");
@@ -2320,23 +2586,8 @@ function refreshVehRestoreChip(i){
     `<button type="button" class="chip small" data-veh-restore="${i}">↩️ החזרת התקלה: ${esc(wanted)}</button>`);
 }
 
-/* צ׳יפ „עדכנו גם את מיקום הרכב” — מופיע כשמיקום התקלה שונה ממיקום הרכב */
-function refreshVehSyncLocChip(i){
-  const box = document.querySelector(`[data-cond="vehicles.${i}.faultWhere:במיקום אחר"]`);
-  const v = state.vehicles[i];
-  if (!box) return;
-  const existing = box.querySelector("[data-veh-setloc]");
-  const want = clean(v.faultWhereText);
-  const need = isVehFaulty(v) && clean(v.faultWhere) === "במיקום אחר" && want && want !== clean(v.location);
-  if (!need){
-    if (existing) existing.parentElement.remove();
-    return;
-  }
-  const label = `עדכנו גם את מיקום הרכב ל״${want}״`;
-  if (existing){ existing.textContent = label; return; }
-  box.insertAdjacentHTML("beforeend",
-    `<div class="sug"><button type="button" class="chip small" data-veh-setloc="${i}">${esc(label)}</button></div>`);
-}
+/* מיקום הרכב נגזר מהתקלה כל עוד הרכב מסומן „תקול” — אין צורך בצ׳יפ סנכרון נפרד */
+function refreshVehSyncLocChip(i){ /* kept for compatibility — no-op */ }
 
 function renderVehFill() {
   const box = document.getElementById("vehFill");
@@ -2352,6 +2603,12 @@ function renderVehFill() {
         </div>
         <button class="x" data-del-veh="${i}" title="הסרה">×</button>
       </div>
+      ${isVehFaulty(v) ? `
+      <div class="vehlock">📍 מיקום לפי התקלה: <b>${esc(vehPlaceLabel(v))}</b>
+        <span class="mut">(נקבע בשדה „היכן התקלה?” למטה)</span></div>
+      <div class="fields">
+        <input data-bind="vehicles.${i}.note" value="${esc(v.note)}" placeholder="הערה">
+      </div>` : `
       <div class="chips opts">
         ${LOCATION_OPTIONS.map(l => `<button class="chip small ${clean(v.location) === l ? "on" : ""}"
             data-chip="vehicles.${i}.location" data-value="${esc(l)}">${esc(l)}</button>`).join("")}
@@ -2359,7 +2616,7 @@ function renderVehFill() {
       <div class="fields">
         <input data-bind="vehicles.${i}.location" value="${esc(v.location)}" list="locList" placeholder="מיקום (אפשר להקליד אחר)">
         <input data-bind="vehicles.${i}.note" value="${esc(v.note)}" placeholder="הערה / תקלה">
-      </div>
+      </div>`}
       <div class="condbox" data-cond="vehicles.${i}.location:${"!" + FREE_LOCATIONS.join("|")}" hidden style="margin-top:8px">
         <label class="field" style="margin-bottom:6px">
           <span>אצל מי הרכב <b class="req">*</b> <span class="mut">(חובה כשלא חניה/סככה)</span></span>
@@ -2391,9 +2648,6 @@ function renderVehFill() {
             <input data-bind="vehicles.${i}.faultWhereText" value="${esc(v.faultWhereText || "")}" list="locList"
                    placeholder="למשל: צומת">
           </label>
-          ${(clean(v.faultWhereText) && clean(v.faultWhereText) !== clean(v.location)) ? `
-          <div class="sug"><button type="button" class="chip small" data-veh-setloc="${i}">
-            עדכנו גם את מיקום הרכב ל״${esc(clean(v.faultWhereText))}״</button></div>` : ""}
         </div>
         <label class="field" style="margin:8px 0 4px">
           <span>הערת התקלה <b class="req">*</b></span>
@@ -2422,6 +2676,21 @@ function renderRosterEdit() {
       </div>
       <div class="row-inline" style="margin-top:6px"><button class="btn small ghost" data-del-roster="${i}">הסרה</button></div>
     </div>`).join("");
+}
+
+function renderNamesEdit() {
+  const box = document.getElementById("namesList");
+  if (!box) return;
+  const dict = nameDictionary();
+  const learnedSet = new Set(learnedNames.map(clean));
+  box.innerHTML = dict.length
+    ? dict.map(n => `<span class="namechip ${learnedSet.has(n) ? "" : "base"}" title="${learnedSet.has(n) ? "שם שהוספתם" : "שם מברירת המחדל של האפליקציה"}">${esc(n)}
+         <button type="button" data-del-name="${esc(n)}" title="הסרה מהמאגר">×</button></span>`).join("")
+    : '<div class="namesempty">המאגר ריק — הוסיפו שמות כדי שהסריקה תזהה אותם בקלות.</div>';
+  const cnt = document.getElementById("namesCount");
+  if (cnt) cnt.textContent = `סה״כ ${dict.length} שמות במאגר · ${learnedNames.length} מהם הוספתם בעצמכם`;
+  const mini = document.getElementById("namesMiniCount");
+  if (mini) mini.textContent = `(${dict.length} שמות)`;
 }
 
 function renderContactsEdit() {
@@ -2582,7 +2851,7 @@ function pendingIssues() {
       if (!clean(v.faultNote)) out.push("הערת תקלה — " + (clean(v.name) || "רכב"));
     }
   });
-  const LABELS = { events:"אירועים במהלך היום", planned:"אירוע מתוכנן", vehicle17:"רכב אחרי 17:00", night:"תקלות בלילה" };
+  const LABELS = { events:"אירועים במהלך היום", planned:"אירוע מתוכנן", vehicle17:"רכב אחרי 17:00", night:"תקלות אחרי שעות העבודה" };
   ["events","planned","vehicle17","night"].forEach(k => {
     const v = clean(state[k].value);
     if (!v){ out.push(LABELS[k]); return; }
@@ -2603,7 +2872,7 @@ function updatePending() {
 
 function renderAll() {
   renderRosterFill(); renderManualRoster(); renderTasksFill(); renderVehFill();
-  renderRosterEdit(); renderContactsEdit(); renderTasksEdit(); renderVehEdit();
+  renderRosterEdit(); renderNamesEdit(); renderContactsEdit(); renderTasksEdit(); renderVehEdit();
   const vs = document.getElementById("verStamp"), vn = document.getElementById("verNotes");
   if (vs) vs.textContent = APP_VERSION;
   if (vn) vn.textContent = VERSION_NOTES;
@@ -2615,14 +2884,23 @@ function renderAll() {
 /* =========================================================
    REPORT BUILDERS
    ========================================================= */
-/* נוסח התקלה לרכב: „תקול בצומת” / „תקול בגף רכב” */
-function vehFaultText(v){
-  const where = clean(v.faultWhere), t = clean(v.faultWhereText);
-  let place;
-  if (where === "בגף רכב") place = "בגף רכב";
-  else if (t) place = /^ב/.test(t) ? t : "ב" + t;                 // „צומת" -> „בצומת", „בצומת" נשאר
-  else place = "מיקום לא צוין";
-  let s = "תקול " + place;
+/* מיקום ברירת המחדל של הרכב — חניה (רכב תקול מוצג לפי מקום התקלה) */
+const vehDefLocation = v => VEH_DEFAULT_LOCATION;   // ברירת המחדל של כולם: חניה
+
+/* המיקום שמופיע לדוח: רכב תקול — המקום שנקבע בלשונית התקול (צומת / בגף רכב),
+   ולא המיקום הרגיל מתוך „חניה / סככה / תובלות / מגורים קבע / שיכון” */
+function vehPlaceLabel(v){
+  if (isVehFaulty(v)){
+    const where = clean(v.faultWhere), t = clean(v.faultWhereText);
+    if (where === "בגף רכב") return "בגף רכב";
+    if (t) return t;
+    return "מיקום לא צוין";
+  }
+  return clean(v.location);
+}
+/* נוסח סימן התקלה (המקום כבר מופיע כשדה המיקום): „תקול” / „תקול: <הערה>” */
+function vehFaultLabel(v){
+  let s = "תקול";
   if (clean(v.faultNote)) s += ": " + clean(v.faultNote);
   return s;
 }
@@ -2695,14 +2973,14 @@ function buildText() {
 
   L.push("*נעילת רכבים ווידוא חניה*");
   state.vehicles.forEach(v => {
-    let line = `• ${clean(v.name)} — ${clean(v.location) || "—"}`;
+    let line = `• ${clean(v.name)} — ${vehPlaceLabel(v) || "—"}`;
     if (needsOwner(v.location) && clean(v.owner)) line += ` | אצל ${clean(v.owner)}`;
     if (clean(v.note)) line += ` (${clean(v.note)})`;
-    if (isVehFaulty(v)) line += ` ⚠️ ${vehFaultText(v)}`;
+    if (isVehFaulty(v)) line += ` ⚠️ ${vehFaultLabel(v)}`;
     L.push(line);
   });
   L.push("");
-  L.push(yn("night", "תקלות בלילה"));
+  L.push(yn("night", "תקלות אחרי שעות העבודה"));
   if (clean(state.notes)) L.push(`*הערות:* ${clean(state.notes)}`);
   return L.join("\n");
 }
@@ -2727,12 +3005,12 @@ function buildDocHTML() {
   const vrows = state.vehicles.map(v => {
     let note = clean(v.note);
     if (isVehFaulty(v)){
-      const ft = "⚠️ " + vehFaultText(v);
+      const ft = "⚠️ " + vehFaultLabel(v);
       note = note ? ft + " | " + note : ft;
     }
     return `
     <tr${isVehFaulty(v) ? ' style="background:#fff7e6"' : ""}><td>${esc(v.name)}</td>
-        <td>${esc(clean(v.location) || "")}</td>
+        <td>${esc(vehPlaceLabel(v) || "")}</td>
         <td>${needsOwner(v.location) ? esc(clean(v.owner) || "") : "—"}</td>
         <td>${esc(note)}</td></tr>`;
   }).join("");
@@ -2759,7 +3037,7 @@ function buildDocHTML() {
     <table><thead><tr><th style="width:32mm">רכב</th><th style="width:32mm">מיקום</th><th style="width:32mm">אצל מי</th><th>הערות</th></tr></thead><tbody>${vrows}</tbody></table>
 
     <h2>סוף יום</h2>
-    ${ynDoc("night", "תקלות בלילה")}
+    ${ynDoc("night", "תקלות אחרי שעות העבודה")}
     <p class="kv"><b>הערות:</b> ${esc(clean(state.notes) || "—")}</p>
 
     <div class="sig">
@@ -2808,8 +3086,8 @@ document.addEventListener("input", e => {
   if (vm) rememberVehFault(state.vehicles[+vm[1]]);
   const vn = /^vehicles\.(\d+)\.name$/.exec(path);
   if (vn) refreshVehRestoreChip(+vn[1]);
-  const vt = /^vehicles\.(\d+)\.faultWhereText$/.exec(path);
-  if (vt) refreshVehSyncLocChip(+vt[1]);
+  /* שינוי מקום התקלה / סימון תקול ⇒ המיקום המוצג מתעדכן */
+  if (/^vehicles\.\d+\.(fault|faultWhere|faultWhereText|faultNote)$/.test(path)) refreshOutputs();
   if (path.startsWith("tasks.") || path.startsWith("vehicles.")) updateProgress();
   refreshOutputs();
 });
@@ -2883,6 +3161,14 @@ document.addEventListener("click", e => {
     scheduleSave(); syncChipGroups(); applyConditions(); updateDayHeader(); refreshOutputs();
     return;
   }
+  const delName = e.target.closest("[data-del-name]");
+  if (delName){
+    const nm = delName.getAttribute("data-del-name");
+    removeNameFromDict(nm);
+    renderNamesEdit();
+    toast(`„${nm}” הוסר מהמאגר`);
+    return;
+  }
   const dRoster = e.target.closest("[data-del-roster]");
   if (dRoster) { state.roster.splice(+dRoster.dataset.delRoster, 1); afterStruct(); return; }
   const dTask = e.target.closest("[data-del-task]");
@@ -2910,13 +3196,11 @@ document.querySelectorAll(".tabs [data-tab]").forEach(b => {
 });
 
 /* ---------- toolbar buttons ---------- */
-document.getElementById("allDone").addEventListener("click", () => {
-  state.tasks.forEach(t => { if (!t.status) t.status = "בוצע"; });
-  afterStruct(); toast("כל הסעיפים סומנו „בוצע” — בדקו ועדכנו חריגים");
-});
 document.getElementById("allParked").addEventListener("click", () => {
-  state.vehicles.forEach(v => { if (!clean(v.location)) v.location = "חניה"; });
-  afterStruct(); toast("המיקומים סומנו כ„חניה”");
+  const n = resetVehicleLocations();
+  afterStruct();
+  toast(n ? `הוחזרו ${n} רכבים לחניה (רכב תקול לא זז)`
+          : "כל הרכבים כבר בחניה");
 });
 document.getElementById("addTask").addEventListener("click", () => {
   state.tasks.push({ id: uid("t"), title: "", hint: "", who: "", status: "", note: "" });
@@ -2929,7 +3213,8 @@ document.getElementById("addTaskTpl").addEventListener("click", () => {
   afterStruct();
 });
 function addVehicle(){
-  state.vehicles.push({ id: uid("v"), name: "", location: "חניה", note: "", owner: "", fault: "", faultWhere: "", faultNote: "" });
+  state.vehicles.push({ id: uid("v"), name: "", location: "חניה", defLocation: "חניה", note: "", owner: "",
+    fault: "", faultWhere: "", faultWhereText: "", faultNote: "" });
   state.roster = state.roster;                 // ללא שינוי
   renderAll();
   const inputs = document.querySelectorAll("#vehFill .item:last-child input");
@@ -2949,8 +3234,9 @@ document.getElementById("restoreVehicles").addEventListener("click", () => {
   missing.forEach(d => {
     const m = mem[clean(d.name)] || {};
     state.vehicles.push({
-      id: uid("v"), name: d.name, location: d.location || "חניה", note: d.note || "", owner: "",
-      fault: d.fault || "", faultWhere: d.faultWhere || "", faultNote: d.faultNote || clean(m.note)
+      id: uid("v"), name: d.name, location: VEH_DEFAULT_LOCATION, defLocation: VEH_DEFAULT_LOCATION,
+      note: d.note || "", owner: "", fault: d.fault || "", faultWhere: d.faultWhere || "",
+      faultWhereText: d.faultWhereText || clean(m.whereText), faultNote: d.faultNote || clean(m.note)
     });
   });
   afterStruct();
@@ -2969,6 +3255,51 @@ document.getElementById("clearContacts").addEventListener("click", () => {
   afterStruct();
   toast("כל הטלפונים הוסרו");
 });
+/* ---------- ניהול שמות לזיהוי ---------- */
+function addNameFromInput(){
+  const inp = document.getElementById("nameAdd");
+  const v = clean(inp ? inp.value : "");
+  if (!v){ toast("כתבו שם ואז הקישו „הוספה”"); return; }
+  const r = addNamesFromText(v);
+  if (inp) inp.value = "";
+  renderNamesEdit();
+  toast(r.added ? `„${v}” נוסף למאגר השמות — הסריקה תזהה אותו` : `„${v}” כבר נמצא במאגר`);
+}
+document.getElementById("nameAddBtn").addEventListener("click", addNameFromInput);
+document.getElementById("nameAdd").addEventListener("keydown", e => {
+  if (e.key === "Enter"){ e.preventDefault(); addNameFromInput(); }
+});
+document.getElementById("namesBulkBtn").addEventListener("click", () => {
+  const ta = document.getElementById("namesBulk");
+  const r = addNamesFromText(ta ? ta.value : "");
+  const msg = document.getElementById("bulkMsg");
+  const txt = r.added
+    ? `נוספו ${r.added} שמות${r.dup ? ` · ${r.dup} כבר היו` : ""}${r.tooShort ? ` · ${r.tooShort} קצרים מדי` : ""}`
+    : (r.dup ? "כל השמות כבר נמצאים במאגר" : "לא זוהו שמות בטקסט");
+  if (msg) msg.textContent = txt;
+  if (ta && r.added) ta.value = "";
+  renderNamesEdit();
+  toast(txt);
+});
+document.getElementById("namesReset").addEventListener("click", () => {
+  if (!hiddenNames.length){ toast("אין שמות שהוסרו — המאגר כבר בברירת המחדל"); return; }
+  const n = hiddenNames.length;
+  resetNameDictionary();
+  renderNamesEdit();
+  toast(`הוחזרו ${n} שמות לברירת המחדל`);
+});
+document.getElementById("manageNames").addEventListener("click", () => {
+  document.querySelector('.tabs [data-tab="set"]').click();
+  const card = document.getElementById("namesCard");
+  if (card){
+    card.scrollIntoView({ behavior:"smooth", block:"start" });
+    card.classList.remove("flash");
+    setTimeout(() => card.classList.add("flash"), 30);
+    const inp = document.getElementById("nameAdd");
+    if (inp) setTimeout(() => { try { inp.focus(); } catch (e) {} }, 700);
+  }
+});
+
 document.getElementById("addContact").addEventListener("click", () => {
   state.contacts.push({ id: uid("c"), label: "", phone: "" });
   afterStruct();
@@ -2983,8 +3314,9 @@ document.getElementById("newDayBtn").addEventListener("click", () => {
     vehicles: clone(state.vehicles).map(v => ({ ...v, note:"", fault:v.fault || "", faultWhere:v.faultWhere || "", faultWhereText:v.faultWhereText || "", faultNote:v.faultNote || "" }))
   };
   state = newState(tpl);
+  resetVehicleLocations();                     // מיקומים חוזרים לברירת מחדל עם פתיחת יום
   storage.set(K_STATE, state);
-  renderAll(); toast("יום חדש נפתח");
+  renderAll(); toast("יום חדש נפתח — הרכבים אופסו לחניה");
 });
 
 document.getElementById("saveTemplate").addEventListener("click", () => {
@@ -3149,6 +3481,57 @@ function migrateContacts(){
   if (state.contacts.length !== before) storage.set(K_STATE, state);
 }
 
+/* ---------- מיקומי רכבים: ברירת מחדל יומית ----------
+   כל הרכבים „חניה”, פיקו 106 „תובלות”. רכב תקול מציג את מקום התקלה (vehPlaceLabel). */
+const K_LASTDAY = "magToran.lastOpenDay.v1";
+
+/* „היום” של התורנות מתחלף ב-04:00 ולא בחצות — כדי שמשמרת לילה שנמשכת אחרי חצות
+   לא תאפס את הנתונים באמצע העבודה */
+function opDayISO(d){
+  const t = d ? new Date(d.getTime()) : new Date();
+  if (t.getHours() < 4) t.setDate(t.getDate() - 1);
+  const p = n => String(n).padStart(2, "0");
+  return t.getFullYear() + "-" + p(t.getMonth() + 1) + "-" + p(t.getDate());
+}
+
+/* מיקום ברירת המחדל של כל רכב: חניה. רכב תקול לא נוגעים בו —
+   הוא ממילא מוצג לפי מקום התקלה (צומת / בגף רכב). */
+const VEH_DEFAULT_LOCATION = "חניה";
+
+function resetVehicleLocations(){
+  let n = 0;
+  state.vehicles.forEach(v => {
+    if (isVehFaulty(v)) return;                     // „למעט רכב במצב תקול”
+    if (clean(v.location) !== VEH_DEFAULT_LOCATION){ v.location = VEH_DEFAULT_LOCATION; n++; }
+  });
+  return n;
+}
+
+/* שאלות היום חוזרות לברירת מחדל: אין אירועים, לא אירוע מתוכנן, לא רכב אחרי 17, אין תקלות אחרי שעות העבודה */
+function resetDailyAnswers(){
+  let n = 0;
+  Object.keys(YN_DEFAULTS).forEach(k => {
+    if (!state[k] || typeof state[k] !== "object"){ state[k] = { value:"", detail:"" }; }
+    const def = YN_DEFAULTS[k];
+    if (clean(state[k].value) !== def || clean(state[k].detail)) n++;
+    state[k].value = def;
+    state[k].detail = "";
+    if ("approved" in state[k]) state[k].approved = "";
+    if ("merged"   in state[k]) state[k].merged = "";
+  });
+  return n;
+}
+
+/* בכניסה הראשונה בכל יום: איפוס מיקומי הרכבים ושאלות היום. אותו יום — לא נוגעים בכלום. */
+function dailyResetIfNewDay(){
+  const today = opDayISO();
+  const last  = clean(storage.get(K_LASTDAY, ""));
+  storage.set(K_LASTDAY, today);
+  if (last === today) return null;
+  if (!last) return null;                       // התקנה ראשונה — לא מוחקים נתונים קיימים
+  return { nLoc: resetVehicleLocations(), nYn: resetDailyAnswers() };
+}
+
 function migrateVehicles(){
   /* שמות רכבים ישנים → החדשים, ומיקומים ישנים → החדשים */
   const RENAME = { "פיקו 1":"פיקו 106", "פיקו 2":"פיקו 173", "פיקו 3":"פיקו 174" };
@@ -3159,6 +3542,7 @@ function migrateVehicles(){
     const n = clean(v.name);
     if (RENAME[n]){ v.name = RENAME[n]; changed = true; }
     /* שדות תקלה חדשים */
+    if (clean(v.defLocation) !== VEH_DEFAULT_LOCATION){ v.defLocation = VEH_DEFAULT_LOCATION; changed = true; }
     if (typeof v.fault !== "string"){ v.fault = ""; changed = true; }
     if (typeof v.faultWhere !== "string"){ v.faultWhere = ""; changed = true; }
     if (typeof v.faultNote !== "string"){ v.faultNote = ""; changed = true; }
@@ -3211,12 +3595,48 @@ function migrateApproved(){
   } catch (e) {}
 }
 
+/* Service Worker Registration — נדרש רק כשהאתר מוגש מהאינטרנט (לא בקובץ מקומי) */
+(function registerSW(){
+  if (!("serviceWorker" in navigator) || !/^https?:$/.test(location.protocol)) return;
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+})();
+
+/* ---------- עדכון עצמי ----------
+   אם עלה קובץ חדש לאתר אבל המכשיר עוד מגיש גרסה ישנה מהמטמון — מנקים ומרעננים לבד.
+   כך אי אפשר להיתקע על גרסה ישנה אחרי שמישהו העלה גרסה חדשה. */
+(function selfUpdate(){
+  try{
+    if (!/^https?:$/.test(location.protocol) || !("serviceWorker" in navigator)) return;
+    const KEY = "magToran.selfUpdate.v1";
+    setTimeout(async () => {
+      try{
+        const r = await fetch("./index.html?_fresh=" + Date.now(), { cache: "no-store" });
+        if (!r.ok) return;
+        const m = /APP_VERSION\s*=\s*"([^"]+)"/.exec(await r.text());
+        const server = m ? m[1] : "";
+        if (!server || server === APP_VERSION) return;                 // מעודכן — אין מה לעשות
+        if (sessionStorage.getItem(KEY) === server) return;            // כבר ניסינו בסבב הזה
+        sessionStorage.setItem(KEY, server);
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(x => x.unregister()));
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+        toast("עלתה גרסה חדשה (" + server + ") — מתקין…");
+        setTimeout(() => location.reload(), 900);
+      } catch (e) {}
+    }, 2500);
+  } catch (e) {}
+})();
+
 (function init() {
   migrateTasks();
   migrateOperation();
   migrateContacts();
   migrateVehicles();
   migrateApproved();
+  const dayReset = dailyResetIfNewDay();          // כניסה ראשונה היום: הרכבים והשאלות לברירת מחדל
   if (clearRosterOnOpen) clearRosterNamesOnEntry();
   state.vehicles.forEach(v => { if (isVehFaulty(v)) rememberVehFault(v); });   // שמירת התקלות הקיימות לזיכרון
   if (!storage.ok){ const w = document.getElementById("storeWarn"); if (w) w.style.display = "block"; }
@@ -3232,6 +3652,12 @@ function migrateApproved(){
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); scheduleSave(); toast("נשמר ✓"); }
   });
   renderAll();
+  if (dayReset){
+    storage.set(K_STATE, state);
+    setTimeout(() => toast(!dayReset.nLoc && !dayReset.nYn
+      ? "יום חדש — הכל בברירת מחדל"
+      : `יום חדש: הוחזרו ${dayReset.nLoc} רכבים לחניה`), 500);
+  }
 })();
 </script>
 </body>
