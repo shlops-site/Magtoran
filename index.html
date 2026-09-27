@@ -1583,8 +1583,8 @@ const FAULT_OPTIONS = ["בגף","בצומת","בשניהם"];
 /* תקול ברכב: איפה התקלה + הערה שנזכרת לפעם הבאה */
 const VEH_FAULT_WHERE = ["בגף רכב","במיקום אחר"];
 const K_VEHFIX = "magToran.vehFaults.v1";
-const APP_VERSION = "27/09/2026 · עדכון 9 · תזכורות · ציר תקלות · ערכת נושא";
-const VERSION_NOTES = "תזכורות חסרים חכמות (סימון אדום + קפוץ לחסר) · ציר זמן תקלות רכב · מצב כהה ידני · חגיגת השלמת משימות · בדיקת תקינות בכניסה";
+const APP_VERSION = "27/09/2026 · עדכון 9.1 · תיקון OCR רון ד";
+const VERSION_NOTES = "תיקון OCR: רווד→רון ד (בלבול ו/ן + פיצול) · תיקונים מובנים לשמות נפוצים · תזכורות חסרים · ציר תקלות · מצב כהה ידני · חגיגת השלמה · בדיקת תקינות";
 const vehFaultMem = () => storage.get(K_VEHFIX, {});
 const isVehFaulty = v => clean(v && v.fault) === "תקול";
 const statusOptionsFor = t => isFireSignTask(t) ? STATUS_OPTIONS : STATUS_OPTIONS.filter(x => x !== "תקול");
@@ -1592,7 +1592,7 @@ const LOCATION_OPTIONS = ["חניה","סככה","תובלות","מגורים ק�
 const FREE_LOCATIONS = ["חניה","סככה"];            // מיקומים שלא דורשים „אצל מי”
 const needsOwner = loc => { const l = clean(loc); return !!l && FREE_LOCATIONS.indexOf(l) < 0; };
 
-const PEOPLE = ["מקסים","דניאל","שלו","חיים","ינון","עמית","צ׳ארלס","רון דולמן","יאיר נסימי","יאיר דניאל","ינון סטמקר","טל","ספיר",
+const PEOPLE = ["מקסים","דניאל","שלו","חיים","ינון","עמית","צ׳ארלס","רון דולמן", "רון ד","יאיר נסימי","יאיר דניאל","ינון סטמקר","טל","ספיר",
                 "פליקס","רועי","איתי","דולב","רייבן","ליאור","אביתר","ירין","חי","נרדי","רון","יאיר","מטתא"];
 
 const uid = p => p + Math.random().toString(36).slice(2, 8);
@@ -1744,6 +1744,115 @@ function pNorm(s){
     .replace(/\s+/g, " ").trim();
 }
 const pSquash = s => pNorm(s).replace(/\s/g, "");
+
+/* בלבולי OCR נפוצים בעברית (מיפוי דו־כיווני) */
+const OCR_CONFUSIONS = {
+  "ו":"ן", "ן":"ו",
+  "י":"ו", "ו":"ן", /* keep last-wins careful - use pairs list instead */
+};
+const OCR_PAIRS = [
+  ["ו","ן"], ["ן","ו"],
+  ["ב","כ"], ["כ","ב"],
+  ["ד","ר"], ["ר","ד"],
+  ["ה","ח"], ["ח","ה"],
+  ["ם","ס"], ["ס","ם"],
+  ["ת","ח"], ["ח","ת"],
+  ["ק","ר"], ["ר","ק"],
+  ["פ","ף"], ["ף","פ"],
+  ["צ","ץ"], ["ץ","צ"],
+  ["נ","ו"], ["ו","נ"],
+  ["ג","נ"], ["נ","ג"],
+  ["י","ן"], ["ן","י"],
+  ["ך","ר"], ["ר","ך"]
+];
+/* תיקונים מובנים: מה שה-OCR קורא → השם הנכון */
+const BUILTIN_NAME_FIXES = {
+  "רווד": "רון ד",
+  "רוור": "רון ד",
+  "רונד": "רון ד",
+  "רוןד": "רון ד",
+  "רן ד": "רון ד",
+  "רנד": "רון ד",
+  "רו וד": "רון ד",
+  "חינרדי": "חי נרדי",
+  "ינוו": "ינון",
+  "מקסיס": "מקסים",
+  "מקסיפ": "מקסים",
+  "רעעי": "רועי",
+  "איחי": "איתי",
+  "איתיי": "איתי",
+  "יננן": "ינון",
+  "ינום": "ינון"
+};
+function seedBuiltinNameFixes(){
+  let changed = false;
+  /* תיקונים קריטיים — תמיד לדרוס (כדי לתקן ערכים ישנים שגויים) */
+  const FORCE = new Set(["רווד","רוור","רונד","רוןד","רן ד","רנד","חינרדי"]);
+  Object.keys(BUILTIN_NAME_FIXES).forEach(raw => {
+    const k = pSquash(raw);
+    if (!k) return;
+    const val = BUILTIN_NAME_FIXES[raw];
+    if (!nameFixes[k] || (FORCE.has(raw) && clean(nameFixes[k]) !== clean(val))){
+      nameFixes[k] = val;
+      changed = true;
+    }
+  });
+  if (changed) storage.set(K_FIX, nameFixes);
+}
+try { seedBuiltinNameFixes(); } catch (e) {}
+
+/* מוסיף «רון ד» כשם עצמאי במאגר הנלמד (אם חסר) */
+(function ensureRonD(){
+  try {
+    const want = "רון ד";
+    const has = (learnedNames || []).some(n => pSquash(n) === pSquash(want))
+             || (typeof PEOPLE !== "undefined" && PEOPLE.some(n => pSquash(n) === pSquash(want)));
+    if (!has && !(learnedNames || []).includes(want)){
+      learnedNames = (learnedNames || []).concat([want]);
+      storage.set(K_NAMES, learnedNames);
+    }
+  } catch (e) {}
+})();
+
+/** כל הווריאציות עם החלפת תו בלבולי OCR אחד */
+function ocrVariants(str){
+  const t = String(str || "");
+  const out = new Set([t]);
+  const chars = t.split("");
+  for (let i = 0; i < chars.length; i++){
+    const c = chars[i];
+    OCR_PAIRS.forEach(([a, b]) => {
+      if (c !== a) return;
+      const copy = chars.slice();
+      copy[i] = b;
+      out.add(copy.join(""));
+    });
+  }
+  return [...out];
+}
+
+/** מרחק עריכה שמתייחס לזוגות OCR כזולים יותר */
+function ocrLev(a, b){
+  a = String(a || ""); b = String(b || "");
+  if (a === b) return 0;
+  const m = a.length, n = b.length;
+  if (!m) return n; if (!n) return m;
+  const cheap = new Set(OCR_PAIRS.map(([x,y]) => x + "→" + y));
+  let prev = Array.from({ length: n + 1 }, (_, i) => i), cur = new Array(n + 1);
+  for (let i = 1; i <= m; i++){
+    cur[0] = i;
+    for (let j = 1; j <= n; j++){
+      const ca = a[i-1], cb = b[j-1];
+      let cost = 0;
+      if (ca !== cb){
+        cost = cheap.has(ca + "→" + cb) || cheap.has(cb + "→" + ca) ? 0.35 : 1;
+      }
+      cur[j] = Math.min(prev[j] + 1, cur[j-1] + 1, prev[j-1] + cost);
+    }
+    const t = prev; prev = cur; cur = t;
+  }
+  return prev[n];
+}
 
 function lev(a, b){
   if (a === b) return 0;
@@ -2101,14 +2210,68 @@ function plausibleVariant(variant, original, dict){
    (3) פיצול לשני שמות מוכרים („חינרדי” ← „חי נרדי”)  (4) שגיאת תו אחת („פדיקס” ← „פליקס”) */
 function trailingSplit(name, dict){
   const t = clean(name);
+  if (!t) return null;
+  /* אם השם כבר מוכר במלואו — לא מפצלים (רועי / מקסים / ינון) */
+  const knownWhole = (dict || []).some(d => {
+    const dc = clean(d);
+    return pSquash(dc) === pSquash(t) || dc === t;
+  });
+  if (knownWhole) return null;
+  /* גם וריאציית OCR שמוכרת כשם שלם */
+  for (const v of ocrVariants(t)){
+    if ((dict || []).some(d => pSquash(clean(d)) === pSquash(v) && clean(d).indexOf(" ") < 0)){
+      /* שם שלם מוכר אחרי OCR — לא פיצול כאן; autoCorrect יטפל */
+      if (pSquash(v) === pSquash(t)) return null;
+    }
+  }
+
   const m = t.match(/^([\u05D0-\u05EA]{3,})([\u05D0-\u05EA])$/);
   if (!m) return null;
-  const prefix = m[1];
-  const known = (dict || []).some(d => {
-    const dc = clean(d);
-    return dc === prefix || dc === prefix + " " + m[2] || dc.indexOf(prefix + " ") === 0;
-  });
-  return known ? prefix + " " + m[2] : null;
+  const letter = m[2];
+  /* לא מפצלים אות סופית ממש (ם ן ץ ף ך) — אלה חלק מהשם, לא אות-סימן */
+  if (/[םןץףך]/.test(letter)) return null;
+
+  const prefixCands = ocrVariants(m[1]);
+  let best = null;
+  /* prefix נחשב מוכר רק אם:
+     - הוא שם שלם במאגר, או
+     - «prefix + letter» במאגר, או
+     - יש במאגר שם שמתחיל ב-«prefix » (כמו «רון דולמן») */
+  const isKnownPrefix = (prefix) => {
+    if (prefix.length < 2) return false;
+    return (dict || []).some(d => {
+      const dc = clean(d);
+      if (dc === prefix) return true;
+      if (dc === prefix + " " + letter) return true;
+      if (dc.indexOf(prefix + " ") === 0) return true;
+      return false;
+    });
+  };
+  for (const prefix of prefixCands){
+    if (!isKnownPrefix(prefix)) continue;
+    const val = prefix + " " + letter;
+    /* אם «prefix + letter» עצמו שם שלם מוכר בלי רווח — לא הפיצול */
+    if ((dict || []).some(d => pSquash(clean(d)) === pSquash(prefix + letter) && clean(d).indexOf(" ") < 0))
+      continue;
+    const exact = (dict || []).some(d => clean(d) === prefix || clean(d) === val);
+    if (exact) return val;
+    if (!best) best = val;
+  }
+  /* «רווד» → וריאציות OCR על כל השם ואז פיצול: רווד→רוןד→רון ד */
+  for (const v of ocrVariants(t)){
+    if (v === t) continue;
+    /* אם הווריאציה עצמה שם שלם במאגר — לא מפצלים */
+    if ((dict || []).some(d => pSquash(clean(d)) === pSquash(v))) continue;
+    const m2 = v.match(/^([\u05D0-\u05EA]{3,})([\u05D0-\u05EA])$/);
+    if (!m2) continue;
+    if (/[םןץףך]/.test(m2[2])) continue;
+    if (!isKnownPrefix(m2[1])) continue;
+    const val = m2[1] + " " + m2[2];
+    if ((dict || []).some(d => clean(d) === m2[1] || clean(d) === val || clean(d).indexOf(m2[1] + " ") === 0))
+      return val;
+    if (!best) best = val;
+  }
+  return best;
 }
 
 /* שם שזוהה שונה מהשם המוכר רק בסימני פיסוק/רווחים — לא באמת „תיקון” */
@@ -2120,23 +2283,36 @@ function sameAfterNormalize(a, b){
 function smartFix(name, dict){
   const t = clean(name);
   if (!t) return null;
+  /* 1) תיקון שנלמד / מובנה */
   const learned = applyLearnedFix(t);
-  if (learned) return { value: learned, how: "learned" };
+  if (learned && clean(learned) !== t) return { value: learned, how: "learned" };
+  /* גם על וריאציות OCR של הקלט */
+  for (const v of ocrVariants(t)){
+    if (v === t) continue;
+    const L = applyLearnedFix(v);
+    if (L && clean(L) !== t) return { value: L, how: "learned" };
+  }
+  /* 2) הפרדת אות אחרונה (+ בלבולי OCR: רווד→רון ד) */
   if (t.indexOf(" ") < 0 && t.indexOf("+") < 0){
-    const sp = t.indexOf("+") >= 0 ? null : trailingSplit(t, dict);
+    const sp = trailingSplit(t, dict);
     if (sp && clean(sp) !== t) return { value: sp, how: "split" };
   }
-  /* פיצול לשני שמות מוכרים */
+  /* 3) פיצול לשני שמות מוכרים */
   const cands = splitCandidates(t, dict);
   const strong = cands.find(c => c.score >= 0.93);
   if (strong && clean(strong.name) !== t) return { value: strong.name, how: "split" };
-  /* גם שם עם „+” — מפצלים כל חלק שלפניו מודבקת אות */
+  /* 4) שם עם „+” — מפצלים/מתקנים כל חלק */
   if (/\+/.test(t)){
     const parts = t.split(/\s*\+\s*/).map(x => x.trim());
-    const fixedParts = parts.map(x => trailingSplit(x, dict) || x);
+    const fixedParts = parts.map(x => {
+      const L = applyLearnedFix(x);
+      if (L) return L;
+      return trailingSplit(x, dict) || autoCorrectFromDict(x) || x;
+    });
     const joined = fixedParts.join(" + ");
     if (clean(joined) !== t) return { value: joined, how: "split" };
   }
+  /* 5) תיקון לפי מאגר (עם מרחק OCR) */
   const fix = autoCorrectFromDict(t);
   if (fix && clean(fix) !== t) return { value: fix, how: "dict" };
   return null;
@@ -2151,18 +2327,43 @@ function autoCorrectFromDict(name){
   const dict = nameDictionary();
   if (!dict.length) return null;
   const key = pSquash(t);
+  /* כבר שם מוכר במלואו — אין מה לתקן */
+  if (dict.some(d => clean(d) === t || pSquash(d) === key && clean(d).indexOf(" ") < 0 && t.indexOf(" ") < 0)){
+    const exact = dict.find(d => clean(d) === t);
+    if (exact) return null;
+  }
   const same = dict.find(d => pSquash(d) === key && clean(d) !== t);
   if (same) return same;                                  // אותו שם עם רווח/איות שונה
+  /* וריאציית OCR מדויקת במאגר — למשל רווד→רוןד, ואז רון ד אם במאגר */
+  for (const v of ocrVariants(t)){
+    const vk = pSquash(v);
+    const hit = dict.find(d => pSquash(d) === vk);
+    if (hit && clean(hit) !== t) return hit;
+    /* trailing-style רק אם האות האחרונה אינה סופית, וה-prefix מוכר */
+    if (v.indexOf(" ") < 0 && v.length >= 4){
+      const letter = v.slice(-1);
+      if (/[םןץףך]/.test(letter)) continue;
+      const prefix = v.slice(0, -1);
+      const sp = prefix + " " + letter;
+      const hit2 = dict.find(d => clean(d) === sp || pSquash(d) === pSquash(sp));
+      if (hit2) return clean(hit2) === sp ? sp : clean(hit2);
+      if (dict.some(d => clean(d) === prefix || clean(d).indexOf(prefix + " ") === 0)){
+        /* אל תחזיר פיצול אם v עצמו שם שלם מוכר */
+        if (dict.some(d => pSquash(d) === vk && clean(d).indexOf(" ") < 0)) continue;
+        return sp;
+      }
+    }
+  }
   if (key.length < 3) return null;                        // שמות קצרים מדי — לא מתקנים
   let best = null;
   dict.forEach(d => {
     const dc = clean(d);
-    if (dc.startsWith(t + " ")) return;                   // לא „מרחיבים” שם קצר לשם מלא
+    if (dc.startsWith(t + " ") && pSquash(dc) !== key) return; // לא מרחיבים שם קצר
     const dk = pSquash(dc);
-    if (Math.abs(dk.length - key.length) > 1) return;
-    const diff = lev(key, dk);
-    if (diff > 1) return;                                 // שגיאת תו אחד בלבד — למשל „נרד” → „נרדי”
-    const sc = pSim(t, dc);
+    if (Math.abs(dk.length - key.length) > 2) return;
+    const diff = ocrLev(key, dk);
+    if (diff > 1.1) return;                               // תו אחד רגיל / בלבול OCR
+    const sc = 1 - diff / Math.max(key.length, dk.length);
     if (!best || sc > best.score) best = { name: dc, score: sc };
   });
   return best ? best.name : null;
@@ -2170,10 +2371,23 @@ function autoCorrectFromDict(name){
 
 /* ---- תיקונים נלמדים: „מה שהסריקה קראה” → „מה שאישרת” ---- */
 function applyLearnedFix(text){
-  const key = pSquash(text);
-  if (!key) return null;
-  const fixed = nameFixes[key];
-  return fixed && fixed !== text ? fixed : null;
+  const raw = clean(text);
+  if (!raw) return null;
+  const tryKey = (k) => {
+    if (!k) return null;
+    const fixed = nameFixes[k];
+    if (!fixed) return null;
+    const f = clean(fixed);
+    if (f === raw) return null;            // כבר מדויק
+    return f;
+  };
+  let hit = tryKey(pSquash(raw));
+  if (hit) return hit;
+  for (const v of ocrVariants(raw)){
+    hit = tryKey(pSquash(v));
+    if (hit) return hit;
+  }
+  return null;
 }
 function rememberFix(detected, approved){
   const d = clean(detected), a = clean(approved);
@@ -4892,5 +5106,6 @@ function migrateApproved(){
   }
 })();
 </script>
-</body>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"1954b47c125f43f8b4338b3c4f804e4f","spa":2}' crossorigin="anonymous"></script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a419d699acc03d7c',t:'MTc5MDUwNTA4MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
