@@ -1,0 +1,35 @@
+WHAT TO DO WITH THIS ZIP (GitHub Pages)
+=======================================
+REPLACE these two files in your repo (they already exist there):
+  - index.html
+  - sw.js
+
+ADD these five files (new):
+  - sync.js
+  - admin.html
+  - firebase-config.js       (your real config - already filled in)
+  - firebase-config.example.js
+  - SETUP.md                 (read this - it is your checklist)
+
+DO NOT touch: manifest.json and the icon-*.png files (unchanged).
+
+GitHub Pages steps:
+  1. Go to your repo on github.com -> "Add file" -> "Upload files".
+  2. Drag ALL files from this zip into the upload box (root of the repo).
+     Existing index.html and sw.js will be overwritten - that is intended.
+  3. Commit.
+  4. Repo -> Settings -> Pages -> Source: "Deploy from a branch" ->
+     Branch: main -> Folder: / (root) -> Save.
+  5. Wait ~1 minute, open the site URL.
+
+BEFORE or right after uploading (Firebase console, project "mag-toran"):
+  1. Enable Firestore: console.firebase.google.com/project/mag-toran/firestore
+     -> Create database -> location me-west1 (Tel Aviv) -> production mode.
+  2. Paste the security rules from SETUP.md (step 3) into Firestore -> Rules.
+  3. Get the VAPID key: console -> Cloud Messaging -> Web Push certificates
+     -> Generate key pair -> paste into firebase-config.js (replace
+     REPLACE-ME-WITH-YOUR-VAPID-KEY). Only needed for push notifications.
+
+Then test: open the app on two devices, mark a car as defective (תקול) on
+one - it appears on the other within a few seconds. Open admin.html for
+the admin view.

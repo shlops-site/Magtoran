@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>לוח בקרה — רכבים ומערכת כיבוי אש</title>
+<style>
+  :root { --green:#2f6d4e; --bg:#f4f6f4; --card:#ffffff;
+          --text:#1d2b24; --mut:#6b7a72; --red:#b3372f; --red-bg:#fdecea; --ok:#1e7a45; --ok-bg:#e8f5ec; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui, "Segoe UI", Arial, sans-serif; background:var(--bg); color:var(--text); }
+  header { background:var(--green); color:#fff; padding:14px 18px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; flex:1; min-width:200px; }
+  #conn { font-size:13px; padding:3px 10px; border-radius:999px; background:rgba(255,255,255,.18); }
+  #conn.ok { background:#dff3e5; color:#0d4d2a; }
+  #conn.err { background:#f6d5d2; color:#7a1f1a; }
+  main { max-width:860px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border-radius:14px; padding:16px; margin-bottom:14px;
+          box-shadow:0 1px 4px rgba(0,0,0,.08); }
+  .card h2 { margin:0 0 10px; font-size:16px; }
+  .row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 0; border-bottom:1px solid #edf0ee; }
+  .row:last-child { border-bottom:0; }
+  .vname { font-weight:700; min-width:120px; flex:0 0 auto; }
+  .chip { display:inline-block; padding:3px 10px; border-radius:999px; font-size:13px; font-weight:700; }
+  .chip.bad { background:var(--red-bg); color:var(--red); }
+  .chip.ok  { background:var(--ok-bg); color:var(--ok); }
+  .chip.neu { background:#eef1ef; color:var(--mut); }
+  .meta { color:var(--mut); font-size:12.5px; }
+  button { font:inherit; cursor:pointer; border:1px solid #cfd8d2; background:#fff; border-radius:9px; padding:6px 12px; }
+  button.primary { background:var(--green); border-color:var(--green); color:#fff; }
+  button.danger { background:var(--red); border-color:var(--red); color:#fff; }
+  button:hover { filter:brightness(.96); }
+  input, select { font:inherit; padding:6px 9px; border:1px solid #cfd8d2; border-radius:9px; background:#fff; color:var(--text); }
+  .form { display:none; gap:8px; flex-wrap:wrap; width:100%; padding:8px 10px; margin-top:6px;
+          background:#f7f9f7; border-radius:10px; }
+  .form.on { display:flex; }
+  .mut { color:var(--mut); }
+  .banner { background:var(--red-bg); color:var(--red); border-radius:12px; padding:12px 16px; margin-bottom:14px; }
+  #toast { position:fixed; bottom:18px; inset-inline-start:50%; transform:translateX(50%);
+           background:#1d2b24; color:#fff; padding:10px 18px; border-radius:999px; font-size:14px;
+           opacity:0; transition:opacity .25s; pointer-events:none; z-index:999; max-width:90vw; }
+  #toast.on { opacity:1; }
+  .alert { padding:8px 0; border-bottom:1px solid #edf0ee; font-size:14px; }
+  .alert:last-child { border-bottom:0; }
+  .alert b { color:var(--red); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛠️ לוח בקרה — רכבים ומערכת כיבוי אש</h1>
+  <span id="conn">● בודק חיבור…</span>
+</header>
+<main>
+  <div class="banner" id="cfgWarn" hidden>
+    ⚠️ חסר <b>firebase-config.js</b> — צרו קובץ כזה (see <b>SETUP.md</b>, step 2) ליד index.html.
+  </div>
+
+  <div class="card" id="fireCard">
+    <h2>🔥 מערכת כיבוי אש</h2>
+    <div class="row">
+      <span class="chip neu" id="fireChip">—</span>
+      <span class="meta" id="fireMeta"></span>
+      <span style="flex:1"></span>
+      <button class="danger" id="fireBadBtn">⚠️ סמן תקול</button>
+      <button id="fireOkBtn">✔️ סמן תקין (בוצע)</button>
+    </div>
+    <div class="form" id="fireForm">
+      <select id="fireFault">
+        <option value="בגף">בגף</option>
+        <option value="בצומת">בצומת</option>
+        <option value="בשניהם">בשניהם</option>
+      </select>
+      <input id="fireNote" placeholder="הערת תקלה (לא חובה)" style="min-width:220px">
+      <button class="primary" id="fireSave">שמור תקול</button>
+      <button id="fireCancel">ביטול</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>🚗 רכבים</h2>
+    <div class="row" style="border-bottom:0">
+      <span class="mut">שם המנהל:</span>
+      <input id="adminName" placeholder="השם שלך (יוצג לכולם)" style="min-width:200px">
+    </div>
+    <div id="vehList"></div>
+    <div class="row" style="border-bottom:0">
+      <input id="newVehName" placeholder="שם רכב חדש…" style="min-width:180px">
+      <button class="primary" id="addVehBtn">➕ הוסף רכב לרשימה המשותפת</button>
+    </div>
+    <p class="mut" style="font-size:12.5px;margin:8px 0 0">רכב שיסומן תקול כאן יופיע תקול מיידית אצל כל מי שיש לו את האפליקציה.</p>
+  </div>
+
+  <div class="card">
+    <h2>🔔 התראות push</h2>
+    <div class="row" style="border-bottom:0">
+      <button class="primary" id="pushBtn">🔔 הפעל התראות push</button>
+      <span class="meta" id="pushMeta">קבלו התראה כאשר מערכת כיבוי האש מסומנת תקול — גם כשהאפליקציה סגורה (דורש את ה-Cloud Function האופציונלי — ראו SETUP.md)</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>📜 התראות אחרונות</h2>
+    <div id="alertList" class="mut">אין התראות עדיין.</div>
+  </div>
+</main>
+<div id="toast"></div>
+
+<script src="./firebase-config.js"></script>
+<script type="module">
+const $ = id => document.getElementById(id);
+const norm = s => String(s == null ? "" : s).replace(/\s+/g, " ").trim();
+const nowISO = () => new Date().toISOString();
+const vehDocId = n => "veh_" + encodeURIComponent(n);
+const vehName = id => { try { return decodeURIComponent(String(id).slice(4)); } catch (e) { return String(id).slice(4); } };
+const fmtTime = at => { try { return at ? new Date(at).toLocaleString("he-IL") : ""; } catch (e) { return ""; } };
+const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+let toastT;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 3500);
+}
+function setConn(ok, text) {
+  const c = $("conn");
+  c.textContent = "● " + text;
+  c.className = ok ? "ok" : "err";
+}
+function adminName() { return norm($("adminName").value) || "מנהל"; }
+
+const shared = { vehicles: {}, fire: null };
+let app, db, messaging = null, getTokenFn = null;
+let docFn = null, setStatusDoc = null, addAlert = null, saveDevice = null;
+
+async function writeVehicle(name, fields) {
+  const doc = Object.assign({ faulty: false, where: "", whereText: "", note: "", by: adminName(), at: nowISO() }, fields);
+  await setStatusDoc(vehDocId(name), doc);
+  toast("✅ " + name + " עודכנה — כל המכשירים רואים את זה");
+}
+async function writeFire(fields) {
+  const prevDefect = shared.fire && shared.fire.status === "תקול";
+  const doc = Object.assign({ status: "", fault: "", note: "", by: adminName(), at: nowISO() }, fields);
+  await setStatusDoc("fire", doc);
+  if (!prevDefect && doc.status === "תקול") {
+    await addAlert({
+      type: "fire_defect",
+      title: "מערכת כיבוי האש סומנה כתקולה (מלוח הבקרה)",
+      body: [doc.fault, doc.note].filter(Boolean).join(" — "),
+      by: doc.by, at: nowISO()
+    });
+  }
+  toast("✅ מצב מערכת כיבוי האש עודכן — כל המכשירים רואים את זה");
+}
+
+function chipFor(v) {
+  if (v && v.faulty) return '<span class="chip bad">⚠️ תקול</span>';
+  return '<span class="chip ok">✔️ תקין</span>';
+}
+function fireChip(f) {
+  if (f && f.status === "תקול") return '<span class="chip bad">⚠️ תקול' + (f.fault ? " — " + esc(f.fault) : "") + '</span>';
+  if (f && f.status) return '<span class="chip ok">✔️ ' + esc(f.status) + '</span>';
+  return '<span class="chip neu">—</span>';
+}
+function metaText(d) {
+  const parts = [];
+  if (d && d.by) parts.push("ע\"י " + esc(d.by));
+  if (d && d.at) parts.push(fmtTime(d.at));
+  return parts.join(" · ");
+}
+
+function renderFire() {
+  const f = shared.fire;
+  $("fireChip").outerHTML = '<span id="fireChip">' + fireChip(f) + '</span>';
+  $("fireMeta").textContent = [metaText(f), f && f.note ? "📝 " + f.note : ""].filter(Boolean).join(" · ");
+}
+
+function renderVehicles() {
+  const list = $("vehList");
+  const names = Object.keys(shared.vehicles).sort((a, b) => a.localeCompare(b, "he"));
+  if (!names.length) { list.innerHTML = '<div class="mut" style="padding:8px 0">אין רכבים עדיין — הוסף רכב למטה.</div>'; return; }
+  list.innerHTML = names.map((name, i) => {
+    const v = shared.vehicles[name];
+    const where = v.where === "במיקום אחר" ? (v.whereText || "במיקום אחר") : (v.where || "");
+    return `<div class="row" data-name="${esc(name)}">
+      <span class="vname">${esc(name)}</span>
+      ${chipFor(v)}
+      <span class="meta">${[esc(where), esc(v.note), metaText(v)].filter(Boolean).join(" · ")}</span>
+      <span style="flex:1"></span>
+      <button class="danger" data-bad="${i}">⚠️ סמן תקול</button>
+      <button data-ok="${i}">✔️ סמן תקין</button>
+      <div class="form" data-form="${i}">
+        <select data-where="${i}">
+          <option value="בגף רכב" ${v.where === "בגף רכב" ? "selected" : ""}>בגף רכב</option>
+          <option value="במיקום אחר" ${v.where === "במיקום אחר" ? "selected" : ""}>במיקום אחר</option>
+        </select>
+        <input data-wheretext="${i}" placeholder="איזה מיקום?" value="${esc(v.whereText || "")}">
+        <input data-note="${i}" placeholder="מה התקלה?" value="${esc(v.note || "")}" style="min-width:200px">
+        <button class="primary" data-save="${i}">שמור תקול</button>
+        <button data-cancel="${i}">ביטול</button>
+      </div>
+    </div>`;
+  }).join("");
+
+  list.querySelectorAll("[data-bad]").forEach(b => b.addEventListener("click", () => {
+    list.querySelector(`[data-form="${b.dataset.bad}"]`).classList.add("on");
+  }));
+  list.querySelectorAll("[data-cancel]").forEach(b => b.addEventListener("click", () => {
+    list.querySelector(`[data-form="${b.dataset.cancel}"]`).classList.remove("on");
+  }));
+  list.querySelectorAll("[data-save]").forEach(b => b.addEventListener("click", async () => {
+    const i = b.dataset.save;
+    const row = b.closest("[data-name]");
+    const where = norm(list.querySelector(`[data-where="${i}"]`).value);
+    const whereText = norm(list.querySelector(`[data-wheretext="${i}"]`).value);
+    const note = norm(list.querySelector(`[data-note="${i}"]`).value);
+    await writeVehicle(row.dataset.name, { faulty: true, where, whereText, note });
+    list.querySelector(`[data-form="${i}"]`).classList.remove("on");
+  }));
+  list.querySelectorAll("[data-ok]").forEach(b => b.addEventListener("click", async () => {
+    const row = b.closest("[data-name]");
+    await writeVehicle(row.dataset.name, { faulty: false, where: "", whereText: "", note: "" });
+  }));
+}
+
+$("fireBadBtn").addEventListener("click", () => { $("fireForm").classList.add("on"); $("fireNote").focus(); });
+$("fireCancel").addEventListener("click", () => $("fireForm").classList.remove("on"));
+$("fireSave").addEventListener("click", async () => {
+  await writeFire({ status: "תקול", fault: norm($("fireFault").value), note: norm($("fireNote").value) });
+  $("fireForm").classList.remove("on"); $("fireNote").value = "";
+});
+$("fireOkBtn").addEventListener("click", async () => {
+  await writeFire({ status: "בוצע", fault: "", note: "" });
+});
+$("addVehBtn").addEventListener("click", async () => {
+  const name = norm($("newVehName").value);
+  if (!name) { toast("⚠️ יש להזין שם רכב"); return; }
+  await writeVehicle(name, { faulty: false });
+  $("newVehName").value = "";
+});
+
+$("pushBtn").addEventListener("click", async () => {
+  try {
+    if (!messaging || !getTokenFn) { toast("❌ בעיה בטעינת ההתראות"); return; }
+    const p = await Notification.requestPermission();
+    if (p !== "granted") { toast("❌ לא ניתנה הרשאה"); return; }
+    const reg = await navigator.serviceWorker.ready;
+    const token = await getTokenFn(messaging, { vapidKey: window.VAPID_KEY, serviceWorkerRegistration: reg });
+    if (!token) { toast("❌ לא התקבל token"); return; }
+    await saveDevice(token);
+    $("pushBtn").style.display = "none";
+    $("pushMeta").textContent = "✅ push הופעל — מכשיר זה יקבל התראות";
+    toast("✅ התראות push הופעלו");
+  } catch (e) { console.warn(e); toast("❌ שגיאה בהפעלת התראות: " + e.message); }
+});
+
+/* service-worker messages (push while this page is open) */
+try {
+  navigator.serviceWorker.addEventListener("message", e => {
+    const d = e.data;
+    if (d && d.type === "magSyncPush" && d.data && d.data.title) {
+      toast("🔔 " + d.data.title + (d.data.body ? " — " + d.data.body : ""));
+    }
+  });
+} catch (e) {}
+
+function renderAlerts(items) {
+  const box = $("alertList");
+  if (!items.length) { box.innerHTML = '<div class="mut">אין התראות עדיין.</div>'; return; }
+  box.innerHTML = items.map(a =>
+    `<div class="alert"><b>${esc(a.title || "התראה")}</b>${a.body ? " — " + esc(a.body) : ""}<br>
+     <span class="meta">${[esc(a.by || ""), fmtTime(a.at)].filter(Boolean).join(" · ")}</span></div>`).join("");
+}
+
+async function init() {
+  if (!window.FIREBASE_CONFIG) { $("cfgWarn").hidden = false; setConn(false, "חסר config"); return; }
+  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js");
+  const fs = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js");
+  app = initializeApp(window.FIREBASE_CONFIG);
+  db = fs.getFirestore(app);
+  try {
+    const m = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-messaging.js");
+    messaging = m.getMessaging(app);
+    getTokenFn = m.getToken;
+  } catch (e) { messaging = null; }
+
+  const { collection, doc: docFn2, onSnapshot, setDoc, addDoc, query, orderBy, limit } = fs;
+  docFn = docFn2;
+  setStatusDoc = (id, data) => setDoc(docFn2(db, "dutyStatus", id), data);
+  addAlert = data => addDoc(collection(db, "alerts"), data);
+  saveDevice = token => setDoc(docFn2(db, "devices", token), {
+    token, ua: String(navigator.userAgent || "").slice(0, 200), at: nowISO()
+  }, { merge: true });
+
+  onSnapshot(query(collection(db, "dutyStatus")), snap => {
+    shared.vehicles = {}; shared.fire = null;
+    snap.forEach(d => {
+      if (d.id === "fire") shared.fire = d.data();
+      else if (String(d.id).indexOf("veh_") === 0) shared.vehicles[vehName(d.id)] = d.data();
+    });
+    renderFire(); renderVehicles(); setConn(true, "מחובר — מעודכן חי");
+  }, e => { console.warn(e); setConn(false, "שגיאת חיבור"); });
+
+  onSnapshot(query(collection(db, "alerts"), orderBy("at", "desc"), limit(30)), snap => {
+    const items = []; snap.forEach(d => items.push(d.data()));
+    renderAlerts(items);
+  }, e => console.warn(e));
+
+  if (messaging && getTokenFn && "Notification" in window && Notification.permission === "granted") {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const token = await getTokenFn(messaging, { vapidKey: window.VAPID_KEY, serviceWorkerRegistration: reg });
+      if (token) await saveDevice(token);
+    } catch (e) { console.warn(e); }
+  }
+}
+init().catch(e => { console.warn(e); setConn(false, "שגיאה: " + e.message); $("cfgWarn").hidden = false; });
+</script>
+</body>
+</html>
