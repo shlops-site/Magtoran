@@ -20,3 +20,9 @@ window.FIREBASE_CONFIG = {
    → Web configuration → Web Push certificates. Needed only for push
    notifications (admin alerts when the app is closed). */
 window.VAPID_KEY = "REPLACE-ME";
+
+/* Optional features (see SETUP.md):
+   - askFireAfterScan: after scanning the roster photo, if the shared
+     fire-system status is defective, the app asks "is it back in business?"
+     and lets the user mark it fixed for everyone. Default: false (off). */
+window.SYNC_OPTIONS = { askFireAfterScan: false };

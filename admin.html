@@ -98,7 +98,12 @@
     </div>
   </div>
 
-  <div class="card">
+    <div class="card">
+    <h2>⚠️ ציר זמן תקלות</h2>
+    <div id="tlList" class="mut">אין תקלות</div>
+  </div>
+
+<div class="card">
     <h2>📜 התראות אחרונות</h2>
     <div id="alertList" class="mut">אין התראות עדיין.</div>
   </div>
@@ -112,7 +117,16 @@ const norm = s => String(s == null ? "" : s).replace(/\s+/g, " ").trim();
 const nowISO = () => new Date().toISOString();
 const vehDocId = n => "veh_" + encodeURIComponent(n);
 const vehName = id => { try { return decodeURIComponent(String(id).slice(4)); } catch (e) { return String(id).slice(4); } };
-const fmtTime = at => { try { return at ? new Date(at).toLocaleString("he-IL") : ""; } catch (e) { return ""; } };
+const fmtTime = at => { const d = toDate(at); return d ? d.toLocaleString("he-IL") : ""; };
+const toDate = v => {
+  try {
+    if (v == null) return null;
+    if (typeof v.toDate === "function") return v.toDate();       // Firestore Timestamp
+    if (typeof v.toMillis === "function") return new Date(v.toMillis());
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? null : d;
+  } catch (e) { return null; }
+};
 const esc = s => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
 let toastT;
@@ -129,16 +143,16 @@ function adminName() { return norm($("adminName").value) || "מנהל"; }
 
 const shared = { vehicles: {}, fire: null };
 let app, db, messaging = null, getTokenFn = null;
-let docFn = null, setStatusDoc = null, addAlert = null, saveDevice = null;
+let docFn = null, setStatusDoc = null, addAlert = null, saveDevice = null, serverTsFn = null;
 
 async function writeVehicle(name, fields) {
-  const doc = Object.assign({ faulty: false, where: "", whereText: "", note: "", by: adminName(), at: nowISO() }, fields);
+  const doc = Object.assign({ faulty: false, where: "", whereText: "", note: "", by: adminName(), at: serverTsFn ? serverTsFn() : nowISO() }, fields);
   await setStatusDoc(vehDocId(name), doc);
   toast("✅ " + name + " עודכנה — כל המכשירים רואים את זה");
 }
 async function writeFire(fields) {
   const prevDefect = shared.fire && shared.fire.status === "תקול";
-  const doc = Object.assign({ status: "", fault: "", note: "", by: adminName(), at: nowISO() }, fields);
+  const doc = Object.assign({ status: "", fault: "", note: "", by: adminName(), at: serverTsFn ? serverTsFn() : nowISO() }, fields);
   await setStatusDoc("fire", doc);
   if (!prevDefect && doc.status === "תקול") {
     await addAlert({
@@ -262,6 +276,26 @@ try {
   });
 } catch (e) {}
 
+function renderTimeline(docs) {
+  const rows = [];
+  docs.forEach(({ name, entries }) => (entries || []).forEach(ev => rows.push({ name, ev })));
+  rows.sort((a, b) => {
+    const ao = a.ev.status === "open" ? 0 : 1, bo = b.ev.status === "open" ? 0 : 1;
+    if (ao !== bo) return ao - bo;
+    return String(b.ev.at || "").localeCompare(String(a.ev.at || ""));
+  });
+  const box = $("tlList");
+  if (!rows.length) { box.innerHTML = '<div class="mut">אין תקלות</div>'; return; }
+  box.innerHTML = rows.slice(0, 40).map(({ name, ev }) => {
+    const open = ev.status === "open";
+    const chip = open ? '<span class="chip bad">⚠️ פתוחה</span>' : '<span class="chip ok">✅ תקין</span>';
+    const where = ev.where === "במיקום אחר" ? (ev.whereText || "") : (ev.where || "");
+    const note = [esc(ev.note || ""), esc(where)].filter(Boolean).join(" · ");
+    const dates = [esc(ev.at || ""), ev.closedAt ? "→ " + esc(ev.closedAt) : ""].filter(Boolean).join(" ");
+    return `<div class="alert"><b>${esc(name)}</b> ${chip} <span class="meta">${dates}</span>${note ? "<br>" + note : ""}</div>`;
+  }).join("");
+}
+
 function renderAlerts(items) {
   const box = $("alertList");
   if (!items.length) { box.innerHTML = '<div class="mut">אין התראות עדיין.</div>'; return; }
@@ -272,18 +306,26 @@ function renderAlerts(items) {
 
 async function init() {
   if (!window.FIREBASE_CONFIG) { $("cfgWarn").hidden = false; setConn(false, "חסר config"); return; }
-  const { initializeApp } = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js");
-  const fs = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js");
-  app = initializeApp(window.FIREBASE_CONFIG);
-  db = fs.getFirestore(app);
-  try {
-    const m = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-messaging.js");
-    messaging = m.getMessaging(app);
-    getTokenFn = m.getToken;
-  } catch (e) { messaging = null; }
+  let fs;
+  const o = window.__MAG_SDK_OVERRIDE__;   // test hook (not used in production)
+  if (o) {
+    fs = o.firestore;                      // tests inject a fake Firestore here
+    app = {}; db = {};
+  } else {
+    const { initializeApp } = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-app.js");
+    fs = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-firestore.js");
+    app = initializeApp(window.FIREBASE_CONFIG);
+    db = fs.getFirestore(app);
+    try {
+      const m = await import("https://www.gstatic.com/firebasejs/13.0.0/firebase-messaging.js");
+      messaging = m.getMessaging(app);
+      getTokenFn = m.getToken;
+    } catch (e) { messaging = null; }
+  }
 
-  const { collection, doc: docFn2, onSnapshot, setDoc, addDoc, query, orderBy, limit } = fs;
+  const { collection, doc: docFn2, onSnapshot, setDoc, addDoc, query, orderBy, limit, serverTimestamp } = fs;
   docFn = docFn2;
+  serverTsFn = serverTimestamp;
   setStatusDoc = (id, data) => setDoc(docFn2(db, "dutyStatus", id), data);
   addAlert = data => addDoc(collection(db, "alerts"), data);
   saveDevice = token => setDoc(docFn2(db, "devices", token), {
@@ -299,7 +341,18 @@ async function init() {
     renderFire(); renderVehicles(); setConn(true, "מחובר — מעודכן חי");
   }, e => { console.warn(e); setConn(false, "שגיאת חיבור"); });
 
-  onSnapshot(query(collection(db, "alerts"), orderBy("at", "desc"), limit(30)), snap => {
+    onSnapshot(query(collection(db, "faultTimeline")), snap => {
+    const docs = [];
+    snap.forEach(d => {
+      if (String(d.id).indexOf("veh_") === 0) {
+        const data = d.data() || {};
+        docs.push({ name: vehName(d.id), entries: Array.isArray(data.entries) ? data.entries : [] });
+      }
+    });
+    renderTimeline(docs);
+  }, e => console.warn(e));
+
+onSnapshot(query(collection(db, "alerts"), orderBy("at", "desc"), limit(30)), snap => {
     const items = []; snap.forEach(d => items.push(d.data()));
     renderAlerts(items);
   }, e => console.warn(e));

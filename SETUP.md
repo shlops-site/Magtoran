@@ -16,6 +16,27 @@
 
 ---
 
+---
+
+## What's new in this update (v2)
+
+1. **Fixed the "only works from the admin panel" bug (the one you hit).**
+   The sync engine only pushed changes during a device's *first ever* session;
+   from the second day on, phones only received but never sent — so only the
+   admin panel (which writes directly) seemed to work. Now every session
+   pushes, every day, for every user.
+2. **Fixed clock-skew conflicts.** Sync now orders changes by **Firestore
+   server time** (not the device's clock). Previously a device whose clock was
+   off (even by an hour) had its writes silently ignored by every other device.
+3. **The fault timeline is now shared too** — every fault, when it was fixed,
+   the note and the location sync to all devices, and the admin panel shows
+   the full live timeline.
+4. **A sync status badge** in the app corner so you can see at a glance
+   whether live sync is working.
+5. **Optional:** after scanning the roster photo, the app can ask "is the fire
+   system back in business?" and mark it fixed for everyone with one tap.
+   **Off by default** — see `window.SYNC_OPTIONS` in `firebase-config.js`.
+
 Your app (צ׳ק ליסט מ״ג תורן) now syncs two things **live across every device**:
 
 1. **Vehicle status** — when anyone marks a car as תקול (defective), every other
@@ -23,6 +44,9 @@ Your app (צ׳ק ליסט מ״ג תורן) now syncs two things **live across ev
 2. **Fire system (מערכת כיבוי אש) status** — when it is marked תקול, every
    device updates instantly **and** an alert is created for the admin
    (admin page + optional push notification, even when the app is closed).
+3. **Fault timeline (ציר זמן תקלות)** — the per-vehicle fault history
+   (what was broken, when, where, the note, when it was fixed) is shared and
+   shown live on the admin panel.
 
 You do **not** run, host, pay for, or maintain any server. This uses
 **Firebase** — a serverless backend run by Google. The free tier (Spark plan)
@@ -54,8 +78,12 @@ checklist with a handful of users will ever use.
 - `sync.js` is a small drop-in script added to your `index.html`. It does not
   change your app's code or UI.
 - `admin.html` is the **separate website** you asked about — an admin console
-  that can change any status and see everything live. It can live on the same
-  host as `index.html`, or on a completely different free host (see step 4).
+  that can change any status and see everything live (vehicles, fire system,
+  **and the fault timeline**). It can live on the same host as `index.html`,
+  or on a completely different free host (see step 4).
+- **Server timestamps decide conflicts.** Each change is stamped by
+  Firestore's servers, so a device with a wrong clock cannot make its writes
+  get ignored (this was the "admin-only sync" bug).
 - Everything degrades gracefully: **offline, the app works exactly as before**;
   sync resumes automatically when the connection is back.
 
@@ -66,8 +94,8 @@ checklist with a handful of users will ever use.
 | File | What it is |
 |---|---|
 | `index.html` | your app — **only 2 lines added** at the end (loads config + sync) |
-| `sync.js` | NEW — the sync engine (drop-in, ~440 lines, commented) |
-| `admin.html` | NEW — the separate admin website (Hebrew UI) |
+| `sync.js` | NEW — the sync engine (drop-in, ~600 lines, commented) |
+| `admin.html` | NEW — the separate admin website (Hebrew UI, shows the fault timeline too) |
 | `firebase-config.example.js` | template — copy to `firebase-config.js` and fill in |
 | `firebase-config.js` | NEW (you create) — your Firebase keys (public by design) |
 | `sw.js` | updated — same offline caching as before, **plus** push-notification display |
@@ -104,6 +132,10 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // shared live status (vehicles + fire system)
     match /dutyStatus/{docId} {
+      allow read, write: if true;
+    }
+    // shared fault timeline (per-vehicle history)
+    match /faultTimeline/{docId} {
       allow read, write: if true;
     }
     // admin alerts (append-only)
@@ -144,6 +176,11 @@ Upload **all** files from this folder to your web host (the same place where
 > The site must be served over **HTTPS** (Firebase and service workers
 > require it). All hosts above do this automatically.
 
+> **Every phone updates automatically.** This update also changes the app's
+> offline-cache name (`sw.js`), so each device downloads the new sync engine
+> by itself the next time it opens the app — no need to clear anything.
+> (If a phone still misbehaves, open the app once and press Ctrl+Shift+R.)
+
 `admin.html` can also be hosted somewhere else entirely (e.g. its own GitHub
 Pages site) — it only needs `firebase-config.js` next to it. Firebase handles
 cross-site requests (CORS) for you.
@@ -156,9 +193,15 @@ cross-site requests (CORS) for you.
    תקול there.
 3. Open **`admin.html`** on the admin's phone/computer:
    - see every vehicle + the fire system live,
+   - see the **⚠️ ציר זמן תקלות** (fault timeline) — open faults first,
+     with dates, notes and locations,
    - mark anything תקול / תקין (with location + note + your name),
    - see the alerts log,
    - click **"הפעל התראות push"** to allow notifications.
+4. Watch the small **sync badge** in the app's corner — green
+   (סנכרון: תקין) means live sync is on; grey (סנכרון: cbוי) means sync is
+   off (no config); red (סנכרון: שגיאה) means the connection to Firebase
+   failed (the app still works offline).
 4. Mark the fire system תקול (from the app or the admin page) → every device
    updates instantly; the admin page shows an alert.
 
@@ -239,15 +282,27 @@ exports.sendAlert = onDocumentCreated("alerts/{alertId}", async (event) => {
 ```
 dutyStatus/veh_<vehicle-name>   { faulty, where, whereText, note, by, at }
 dutyStatus/fire                 { status, fault, note, by, at }
+faultTimeline/veh_<vehicle-name>{ name, entries[≤40], at }   ← fault history
 alerts/{auto-id}                { type:"fire_defect", title, body, by, at }
 devices/{fcm-token}             { token, ua, at }
 ```
 
-- `at` = ISO timestamp of the last change. **Last write wins** per document.
+`entries` = the vehicle's timeline rows
+`{ at, status:"open"|"closed", note, where, whereText, source, closedAt? }`,
+newest first, capped at 40 per vehicle. The app and the admin panel keep the
+shared timeline merged (a fault recorded offline is not lost).
+
+- `at` = **server** timestamp (Firestore `serverTimestamp()`), not the device
+  clock. **Last write wins** per document, judged by server time — so a device
+  with a wrong clock can no longer get its changes ignored.
 - Each vehicle is its own document, so two devices marking *different* cars
   at the same time never overwrite each other.
 - `sync.js` keeps a local "mirror" of the last shared state — this is what
   prevents update loops between devices.
+- **Joining rule:** the very first device (empty cloud) seeds the shared state
+  from its local app. A device that joins later **adopts** the shared state
+  (the cloud wins) — it never overwrites everyone's newer changes with its own
+  stale defaults.
 
 ## Security
 
@@ -292,14 +347,28 @@ match /devices/{docId}   { allow read: if request.auth != null; allow create, up
 - **BroadcastChannel / localStorage events** — only syncs tabs on the *same*
   device. Not across users.
 
+## Optional features (`window.SYNC_OPTIONS` in `firebase-config.js`)
+
+```js
+window.SYNC_OPTIONS = {
+  // After scanning the roster photo, if the shared fire-system status is
+  // defective, ask "was it fixed?" — answering yes marks it fixed for EVERYONE.
+  // Default: false (off). Set to true to enable.
+  askFireAfterScan: false
+};
+```
+
 ## Notes & limits
 
-- First device to enable sync "seeds" the shared state from its local app;
-  after that, timestamps decide.
+- The first device ever (empty cloud) seeds the shared state from its local
+  app; a device that joins later adopts the shared state (cloud wins).
 - Deleting a vehicle from the app's list publishes it as "not faulty" once
   (so nobody sees a ghost תקול).
 - Sync checks the saved state every 2 seconds — a change appears on other
   devices within ~1–3 seconds.
 - The app's own offline behavior (service worker cache) is unchanged.
-- Tested end-to-end with a simulated multi-device test suite (23 assertions:
-  bootstrap, push, alerts, remote apply, loop prevention).
+- Tested end-to-end with a simulated multi-device suite: unit tests
+  (bootstrap, push, alerts, remote apply, loop prevention, joining device,
+  returning device, timeline sync) plus a real-browser test that loads the
+  actual app on three devices — including one with a clock 1 hour behind —
+  and verifies every change reaches every device.

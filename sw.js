@@ -1,7 +1,7 @@
 /* Service Worker — שומר את האפליקציה במכשיר כדי שתעבוד גם בלי אינטרנט */
 /* שים לב: שם המטמון מוחלף אוטומטית ע"י tools/publish.sh לפי תוכן index.html,
    כדי שכל גרסה חדשה תוריד את עצמה מחדש ולא תיתקע על העתק ישן. */
-const CACHE = "mag-toran-sync-v1";
+const CACHE = "mag-toran-sync-v2";
 const ASSETS = ["./", "./index.html", "./admin.html", "./manifest.json",
                 "./sync.js", "./firebase-config.js",
                 "./icon-180.png", "./icon-192.png", "./icon-512.png", "./icon-maskable-512.png"];

@@ -21,3 +21,9 @@ window.FIREBASE_CONFIG = {
 /* Web Push certificate (VAPID) — Firebase console → Cloud Messaging →
    Web configuration → Web Push certificates → Generate key pair. */
 window.VAPID_KEY = "REPLACE-ME-WITH-YOUR-VAPID-KEY";
+
+/* Optional features (see SETUP.md):
+   - askFireAfterScan: after scanning the roster photo, if the shared
+     fire-system status is defective, the app asks "is it back in business?"
+     and lets the user mark it fixed for everyone. Default: false (off). */
+window.SYNC_OPTIONS = { askFireAfterScan: false };

@@ -1,15 +1,26 @@
-WHAT TO DO WITH THIS ZIP (GitHub Pages)
-=======================================
+WHAT TO DO WITH THIS ZIP (GitHub Pages) — UPDATE v2 (IMPORTANT)
+===============================================================
+This update FIXES the bug you reported: the app only synced from the admin
+panel. Two fixes are inside:
+  1. The sync engine only pushed during a phone's FIRST session — from the
+     second day on, phones never sent their changes. Now every session pushes.
+  2. Changes are now ordered by Firestore SERVER time, so a phone with a wrong
+     clock can no longer get its changes ignored.
+Also new: the shared fault timeline (shown on the admin panel), a sync status
+badge in the app, and an optional post-scan question (off by default).
+
 REPLACE these two files in your repo (they already exist there):
   - index.html
-  - sw.js
+  - sw.js                   (CHANGED too — new offline-cache name, so every
+                            phone downloads the new sync.js automatically)
 
-ADD these five files (new):
-  - sync.js
-  - admin.html
-  - firebase-config.js       (your real config - already filled in)
+ADD these six files (new or updated):
+  - sync.js                   (updated - the sync engine)
+  - admin.html                (updated - now shows the fault timeline too)
+  - firebase-config.js        (your real config - already filled in)
   - firebase-config.example.js
-  - SETUP.md                 (read this - it is your checklist)
+  - SETUP.md                  (updated - read this, it is your checklist)
+  - UPLOAD-THIS.txt           (this file)
 
 DO NOT touch: manifest.json and the icon-*.png files (unchanged).
 
@@ -21,15 +32,21 @@ GitHub Pages steps:
   4. Repo -> Settings -> Pages -> Source: "Deploy from a branch" ->
      Branch: main -> Folder: / (root) -> Save.
   5. Wait ~1 minute, open the site URL.
+  6. Phones pick up the new sync.js by themselves the next time they open the
+     app (the offline-cache name changed). If one still misbehaves: open the
+     app and press Ctrl+Shift+R once.
 
 BEFORE or right after uploading (Firebase console, project "mag-toran"):
-  1. Enable Firestore: console.firebase.google.com/project/mag-toran/firestore
+  1. Enable Firestore (if not yet): console.firebase.google.com/project/mag-toran/firestore
      -> Create database -> location me-west1 (Tel Aviv) -> production mode.
-  2. Paste the security rules from SETUP.md (step 3) into Firestore -> Rules.
+  2. UPDATE the security rules: paste the rules from SETUP.md (step 3) into
+     Firestore -> Rules again — they now also cover the new "faultTimeline"
+     collection (without this the timeline will not sync).
   3. Get the VAPID key: console -> Cloud Messaging -> Web Push certificates
      -> Generate key pair -> paste into firebase-config.js (replace
      REPLACE-ME-WITH-YOUR-VAPID-KEY). Only needed for push notifications.
 
-Then test: open the app on two devices, mark a car as defective (תקול) on
-one - it appears on the other within a few seconds. Open admin.html for
-the admin view.
+Then test: open the app on two phones. Mark a car as defective (תקול) on one —
+it appears on the other within a few seconds. Mark it fixed — the fix also
+appears everywhere and STAYS until someone changes it again. Open admin.html
+for the admin view + the fault timeline.
