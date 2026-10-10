@@ -41,6 +41,9 @@
   var K_STATE    = "magToran.state.v1";     // the app's own saved state
   var K_MIRROR   = "magToran.syncMirror.v1"; // last known shared state (loop guard)
   var K_FAULT_TL = "magToran.faultTimeline.v1"; // the app's fault timeline
+  var K_FIRE_TL = "magToran.syncFireTimeline.v1"; // fire-system fault archive (sync.js only, admin panel)
+  var FIRE_TL_KEY = "__fire__";                  // internal timeline key for the fire system
+  var FIRE_NAME = "מערכת כיבוי האש";              // display name in the admin timeline
   var COL_STATUS = "dutyStatus";
   var COL_TIMELINE = "faultTimeline";
   var COL_ALERTS = "alerts";
@@ -59,6 +62,7 @@
   /* ---------- small helpers ---------- */
   function norm(s) { return String(s == null ? "" : s).replace(/\s+/g, " ").trim(); }
   function nowISO() { return new Date().toISOString(); }
+  function todayISO() { return new Date().toISOString().slice(0, 10); }
   function readJSON(k, def) { try { var r = localStorage.getItem(k); return r == null ? def : JSON.parse(r); } catch (e) { return def; } }
   function writeJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function vehDocId(name) { return "veh_" + encodeURIComponent(name); }
@@ -147,6 +151,32 @@
     for (var i = 0; i < a.length; i++) if (entrySig(a[i]) !== entrySig(b[i])) return false;
     return true;
   }
+  /* A timeline entry's stable identity — the fields that do NOT change when an
+     entry is closed (status/closedAt change, the rest stays). Used to tell
+     "the same entry, updated" apart from "a different entry" and from
+     "an entry someone deleted from the admin panel". */
+  function entryId(e) {
+    if (!e) return "";
+    return JSON.stringify([norm(e.at), norm(e.note), norm(e.where), norm(e.whereText), norm(e.source)]);
+  }
+  /* Merge remote + local timeline entries:
+     - remote wins for entries both sides know (same identity);
+     - entries created locally (offline) and never seen remotely are kept;
+     - entries that WERE remote but are gone now were deleted (admin panel) — drop them. */
+  function mergeTimelineEntries(remoteEntries, localList, prevRemote) {
+    var remoteIds = {}, prevIds = {};
+    (remoteEntries || []).forEach(function (e) { remoteIds[entryId(e)] = true; });
+    (prevRemote || []).forEach(function (e) { prevIds[entryId(e)] = true; });
+    var merged = dedupeOpenEntries((remoteEntries || []).slice());
+    (localList || []).forEach(function (e) {
+      if (!e) return;
+      var id = entryId(e);
+      if (remoteIds[id]) return;   // remote already has this logical entry
+      if (prevIds[id]) return;     // was remote, now gone -> deleted -> drop
+      merged.push(e);              // local-only (offline) -> keep
+    });
+    return dedupeOpenEntries(merged).slice(0, 40);
+  }
 
   /* ---------- extract shared statuses from the app state ---------- */
   function extract(st) {
@@ -185,6 +215,9 @@
     Object.keys(tl).forEach(function (name) {
       if (Array.isArray(tl[name]) && tl[name].length) out.timeline[name] = tl[name];
     });
+    // fire-system faults are archived in the shared timeline too (admin panel only)
+    var ftl = readJSON(K_FIRE_TL, []);
+    if (Array.isArray(ftl) && ftl.length) out.timeline[FIRE_TL_KEY] = ftl;
     return out;
   }
 
@@ -346,42 +379,70 @@
     var mirror = readJSON(K_MIRROR, null);
     if (!mirror || !bootstrapped) { pendingTimelineSnap = snap; return; }
     mirror.timeline = mirror.timeline || {};
-    var local = readJSON(K_FAULT_TL, {}) || {};
-    var dirty = false, mirrorDirty = false;
+    var mirrorDirty = false, vehDirty = false;
     snap.forEach(function (d) {
-      if (String(d.id).indexOf("veh_") !== 0) return;
-      var name = vehNameFromDocId(d.id);
+      var id = String(d.id), name;
+      if (id === "fire") name = FIRE_TL_KEY;                        // fire-system archive
+      else if (id.indexOf("veh_") === 0) name = vehNameFromDocId(id);
+      else return;
       var data = d.data() || {};
       var entries = Array.isArray(data.entries) ? data.entries : [];
       var m = mirror.timeline[name];
       var rMs = atMillis(data.at), mMs = mAtMs(m);
       if (!m || (rMs != null && (mMs == null || rMs > mMs))) {
-        // union: remote entries + local-only entries (keeps offline-created entries)
-        var localList = Array.isArray(local[name]) ? local[name] : [];
-        var seen = {};
-        entries.forEach(function (e) { seen[entrySig(e)] = true; });
-        var merged = dedupeOpenEntries(entries);
-        localList.forEach(function (e) { if (!seen[entrySig(e)]) merged.push(e); });
-        merged = dedupeOpenEntries(merged).slice(0, 40);
-        local[name] = merged;
-        mirror.timeline[name] = { entries: merged, atMs: rMs };
-        dirty = true;
+        var isFire = name === FIRE_TL_KEY;
+        var local = readJSON(isFire ? K_FIRE_TL : K_FAULT_TL, isFire ? [] : {});
+        if (!local || typeof local !== "object" || Array.isArray(local)) local = isFire ? [] : {};
+        var localList = isFire ? local : (Array.isArray(local[name]) ? local[name] : []);
+        var prevRemote = m && Array.isArray(m.entries) ? m.entries : [];
+        var merged = mergeTimelineEntries(entries, localList, prevRemote);
+        if (isFire) writeJSON(K_FIRE_TL, merged);
+        else { local[name] = merged; writeJSON(K_FAULT_TL, local); vehDirty = true; }
+        mirror.timeline[name] = { entries: entries.slice(), atMs: rMs };  // mirror = the remote list
         mirrorDirty = true;
       }
     });
     if (mirrorDirty) writeJSON(K_MIRROR, mirror);
-    if (dirty) {
-      writeJSON(K_FAULT_TL, local);
+    if (vehDirty) {
       try { if (typeof window.renderFaultTimeline === "function") window.renderFaultTimeline(); } catch (e) {}
     }
   }
 
   /* ---------- outgoing local state ---------- */
+  /* Keep the fire-system fault archive in sync with the app's fire task:
+     תקול -> one open entry; anything else -> close it (that is the archive point). */
+  function reconcileFireTimeline(st) {
+    var t = firstFireTask(st);
+    if (!t) return;
+    var list = readJSON(K_FIRE_TL, []);
+    if (!Array.isArray(list)) list = [];
+    var isFault = norm(t.status) === "תקול";
+    var open = null;
+    for (var i = 0; i < list.length; i++) if (list[i] && norm(list[i].status) === "open") { open = list[i]; break; }
+    var changed = false;
+    if (isFault) {
+      if (!open) {
+        list.unshift({ at: todayISO(), status: "open", note: norm(t.note) || "", where: norm(t.fault) || "", whereText: "", source: "mark" });
+        changed = true;
+      } else {
+        var note = norm(t.note) || "", where = norm(t.fault) || "";
+        if (open.note !== note) { open.note = note; changed = true; }
+        if (open.where !== where) { open.where = where; changed = true; }
+      }
+    } else if (open) {
+      open.status = "closed";
+      open.closedAt = todayISO();
+      changed = true;
+    }
+    if (changed) writeJSON(K_FIRE_TL, list.slice(0, 40));
+  }
+
   function poll() {
     if (!bootstrapped || pushing) return;
     if (Date.now() < pushBlockedUntil) return;
     var st = readState();
     if (!st) return;
+    reconcileFireTimeline(st);
     var mirror = readJSON(K_MIRROR, null) || { vehicles: {}, fire: null, timeline: {} };
     var payload = extract(st);
     pushChanged(payload, mirror);
@@ -404,7 +465,7 @@
       var entries = payload.timeline[name];
       var m = mirror.timeline[name];
       if (!m || !sameEntries(m.entries, entries)) {
-        writes.push({ id: vehDocId(name), kind: "timeline", name: name, entries: entries });
+        writes.push({ id: name === FIRE_TL_KEY ? "fire" : vehDocId(name), kind: "timeline", name: name, entries: entries });
       }
     });
     if (!writes.length) return;
@@ -417,7 +478,7 @@
       } else if (w.kind === "fire") {
         data = { status: w.fields.status, fault: w.fields.fault, note: w.fields.note, by: w.fields.by, at: fsSdk.serverTimestamp() };
       } else {
-        data = { name: w.name, entries: w.entries, at: fsSdk.serverTimestamp() };
+        data = { name: w.name === FIRE_TL_KEY ? FIRE_NAME : w.name, entries: w.entries, at: fsSdk.serverTimestamp() };
       }
       var col = w.kind === "timeline" ? COL_TIMELINE : COL_STATUS;
       return fsSdk.setDoc(fsSdk.doc(db, col, w.id), data).then(function () { return w; });
@@ -505,6 +566,18 @@
           toast("🔔 " + d.data.title + (d.data.body ? " — " + d.data.body : ""));
         }
       });
+    } catch (e) {}
+  }
+
+  /* The fault timeline is an ADMIN archive — hide it inside the app.
+     The data still syncs; only the display is removed. */
+  function hideAppTimeline() {
+    try {
+      if (document.getElementById("syncHideTl")) return;
+      var st = document.createElement("style");
+      st.id = "syncHideTl";
+      st.textContent = "#faultTimeline{display:none!important}";
+      (document.head || document.documentElement).appendChild(st);
     } catch (e) {}
   }
 
@@ -599,6 +672,7 @@
     setInterval(poll, POLL_MS);
     listenSwMessages();
     watchScanCompletion();
+    hideAppTimeline();
     if (msgSdk) setupPush();
     // safety net: if the listener never fires (SDK/config problem), still push local state
     setTimeout(function () {

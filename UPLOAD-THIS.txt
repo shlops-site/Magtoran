@@ -1,13 +1,15 @@
-WHAT TO DO WITH THIS ZIP (GitHub Pages) — UPDATE v2 (IMPORTANT)
+WHAT TO DO WITH THIS ZIP (GitHub Pages) — UPDATE v3 (IMPORTANT)
 ===============================================================
-This update FIXES the bug you reported: the app only synced from the admin
-panel. Two fixes are inside:
-  1. The sync engine only pushed during a phone's FIRST session — from the
-     second day on, phones never sent their changes. Now every session pushes.
-  2. Changes are now ordered by Firestore SERVER time, so a phone with a wrong
-     clock can no longer get its changes ignored.
-Also new: the shared fault timeline (shown on the admin panel), a sync status
-badge in the app, and an optional post-scan question (off by default).
+What changed since the last update:
+  - The fault timeline NO LONGER appears inside the app (it was clogging the
+    screen). It is now an ADMIN-ONLY archive in admin.html.
+  - When a car OR the fire alarm system is fixed, that point is archived in
+    the timeline automatically (with the date it was fixed).
+  - The admin panel timeline now has: a DELETE button on every archived
+    (fixed) point, and an EXPORT button that downloads the whole timeline as
+    a CSV file (opens in Excel).
+  - (Previous fixes still included: every session pushes, and changes are
+    ordered by Firestore server time, so wrong phone clocks no longer matter.)
 
 REPLACE these two files in your repo (they already exist there):
   - index.html
@@ -16,7 +18,7 @@ REPLACE these two files in your repo (they already exist there):
 
 ADD these six files (new or updated):
   - sync.js                   (updated - the sync engine)
-  - admin.html                (updated - now shows the fault timeline too)
+  - admin.html                (updated - timeline archive: delete + export)
   - firebase-config.js        (your real config - already filled in)
   - firebase-config.example.js
   - SETUP.md                  (updated - read this, it is your checklist)
@@ -40,13 +42,19 @@ BEFORE or right after uploading (Firebase console, project "mag-toran"):
   1. Enable Firestore (if not yet): console.firebase.google.com/project/mag-toran/firestore
      -> Create database -> location me-west1 (Tel Aviv) -> production mode.
   2. UPDATE the security rules: paste the rules from SETUP.md (step 3) into
-     Firestore -> Rules again — they now also cover the new "faultTimeline"
+     Firestore -> Rules again — they now also cover the "faultTimeline"
      collection (without this the timeline will not sync).
   3. Get the VAPID key: console -> Cloud Messaging -> Web Push certificates
      -> Generate key pair -> paste into firebase-config.js (replace
      REPLACE-ME-WITH-YOUR-VAPID-KEY). Only needed for push notifications.
 
-Then test: open the app on two phones. Mark a car as defective (תקול) on one —
-it appears on the other within a few seconds. Mark it fixed — the fix also
-appears everywhere and STAYS until someone changes it again. Open admin.html
-for the admin view + the fault timeline.
+CLEANING UP YOUR TEST DATA (the entries from your testing):
+  - The app no longer shows the timeline at all — the screen is clean.
+  - Open admin.html -> in the timeline card, mark the test vehicles as fixed
+    (✔️ סמן תקין in the vehicles list) — their points move to the archive.
+  - Then delete the archived test points with the 🗑 button next to each one.
+  - 💾 exports the whole timeline to CSV if you want to keep a copy first.
+
+Then test: open the app on two phones. Mark a car as defective on one — it
+appears on the other within a few seconds and STAYS until someone marks it
+fixed. Open admin.html for the admin view + the timeline archive.

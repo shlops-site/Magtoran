@@ -99,7 +99,11 @@
   </div>
 
     <div class="card">
-    <h2>⚠️ ציר זמן תקלות</h2>
+    <h2>🗄️ ציר זמן תקלות (ארכיון)</h2>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
+      <button type="button" id="tlExport">💾 ייצוא CSV</button>
+      <span class="meta" id="tlCount"></span>
+    </div>
     <div id="tlList" class="mut">אין תקלות</div>
   </div>
 
@@ -143,7 +147,7 @@ function adminName() { return norm($("adminName").value) || "מנהל"; }
 
 const shared = { vehicles: {}, fire: null };
 let app, db, messaging = null, getTokenFn = null;
-let docFn = null, setStatusDoc = null, addAlert = null, saveDevice = null, serverTsFn = null;
+let docFn = null, setStatusDoc = null, addAlert = null, saveDevice = null, serverTsFn = null, setTimelineDoc = null;
 
 async function writeVehicle(name, fields) {
   const doc = Object.assign({ faulty: false, where: "", whereText: "", note: "", by: adminName(), at: serverTsFn ? serverTsFn() : nowISO() }, fields);
@@ -276,24 +280,68 @@ try {
   });
 } catch (e) {}
 
+let tlDocs = {};   // docId -> { name, entries } — the shared timeline (live)
+let tlRows = [];     // rendered rows -> { docId, name, ev } (for the delete buttons)
+
 function renderTimeline(docs) {
+  tlRows = [];
   const rows = [];
-  docs.forEach(({ name, entries }) => (entries || []).forEach(ev => rows.push({ name, ev })));
+  docs.forEach(({ docId, name, entries }) => (entries || []).forEach(ev => rows.push({ docId, name, ev })));
   rows.sort((a, b) => {
     const ao = a.ev.status === "open" ? 0 : 1, bo = b.ev.status === "open" ? 0 : 1;
     if (ao !== bo) return ao - bo;
     return String(b.ev.at || "").localeCompare(String(a.ev.at || ""));
   });
   const box = $("tlList");
+  $("tlCount").textContent = rows.length ? rows.length + " רשומות בארכיון" : "";
   if (!rows.length) { box.innerHTML = '<div class="mut">אין תקלות</div>'; return; }
-  box.innerHTML = rows.slice(0, 40).map(({ name, ev }) => {
-    const open = ev.status === "open";
+  box.innerHTML = rows.slice(0, 100).map((r) => {
+    const open = r.ev.status === "open";
     const chip = open ? '<span class="chip bad">⚠️ פתוחה</span>' : '<span class="chip ok">✅ תקין</span>';
-    const where = ev.where === "במיקום אחר" ? (ev.whereText || "") : (ev.where || "");
-    const note = [esc(ev.note || ""), esc(where)].filter(Boolean).join(" · ");
-    const dates = [esc(ev.at || ""), ev.closedAt ? "→ " + esc(ev.closedAt) : ""].filter(Boolean).join(" ");
-    return `<div class="alert"><b>${esc(name)}</b> ${chip} <span class="meta">${dates}</span>${note ? "<br>" + note : ""}</div>`;
+    const where = r.ev.where === "במיקום אחר" ? (r.ev.whereText || "במיקום אחר") : (r.ev.where || "");
+    const note = [esc(r.ev.note || ""), esc(where)].filter(Boolean).join(" · ");
+    const dates = [esc(r.ev.at || ""), r.ev.closedAt ? "→ " + esc(r.ev.closedAt) : ""].filter(Boolean).join(" ");
+    // archived (closed) points can be deleted; open faults are still live — mark the vehicle fixed first
+    const del = open ? "" : `<button type="button" class="danger" data-row="${tlRows.length}" title="מחק מהרכיון" style="padding:2px 8px">🗑️</button>`;
+    tlRows.push(r);
+    return `<div class="alert"><b>${esc(r.name)}</b> ${chip} <span class="meta">${dates}</span>${note ? "<br>" + note : ""}${del}</div>`;
   }).join("");
+}
+
+async function deleteTimelineEntry(rowIdx) {
+  const row = tlRows[rowIdx];
+  if (!row || !setTimelineDoc) return;
+  const doc = tlDocs[row.docId];
+  if (!doc) return;
+  const entries = (doc.entries || []).filter(e => e !== row.ev);
+  try {
+    await setTimelineDoc(row.docId, { name: doc.name, entries: entries, at: serverTsFn ? serverTsFn() : nowISO() });
+    toast("✅ נמחק מהרכיון");
+  } catch (e) { console.warn(e); toast("❌ המחיקה נכשלה"); }
+}
+
+function exportTimelineCSV() {
+  const header = ["רכב / מערכת", "סטטוס", "נפתח", "נסגר", "הערה", "מיקום"];
+  const rows = [header];
+  Object.keys(tlDocs).sort().forEach(id => {
+    const doc = tlDocs[id];
+    (doc.entries || []).forEach(e => {
+      const status = e.status === "open" ? "פתוחה" : "תקין";
+      const where = e.where === "במיקום אחר" ? (e.whereText || "במיקום אחר") : (e.where || "");
+      rows.push([doc.name || id, status, e.at || "", e.closedAt || "", e.note || "", where]);
+    });
+  });
+  const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const csv = "\ufeff" + rows.map(r => r.map(q).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "mag-toran-timeline-" + new Date().toISOString().slice(0, 10) + ".csv";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast("✅ הקובץ מוכן להורדה");
 }
 
 function renderAlerts(items) {
@@ -327,6 +375,7 @@ async function init() {
   docFn = docFn2;
   serverTsFn = serverTimestamp;
   setStatusDoc = (id, data) => setDoc(docFn2(db, "dutyStatus", id), data);
+  setTimelineDoc = (id, data) => setDoc(docFn2(db, "faultTimeline", id), data);
   addAlert = data => addDoc(collection(db, "alerts"), data);
   saveDevice = token => setDoc(docFn2(db, "devices", token), {
     token, ua: String(navigator.userAgent || "").slice(0, 200), at: nowISO()
@@ -341,15 +390,13 @@ async function init() {
     renderFire(); renderVehicles(); setConn(true, "מחובר — מעודכן חי");
   }, e => { console.warn(e); setConn(false, "שגיאת חיבור"); });
 
-    onSnapshot(query(collection(db, "faultTimeline")), snap => {
-    const docs = [];
+  onSnapshot(query(collection(db, "faultTimeline")), snap => {
+    tlDocs = {};
     snap.forEach(d => {
-      if (String(d.id).indexOf("veh_") === 0) {
-        const data = d.data() || {};
-        docs.push({ name: vehName(d.id), entries: Array.isArray(data.entries) ? data.entries : [] });
-      }
+      const data = d.data() || {};
+      tlDocs[String(d.id)] = { name: data.name || vehName(String(d.id)), entries: Array.isArray(data.entries) ? data.entries : [] };
     });
-    renderTimeline(docs);
+    renderTimeline(Object.keys(tlDocs).map(id => Object.assign({ docId: id }, tlDocs[id])));
   }, e => console.warn(e));
 
 onSnapshot(query(collection(db, "alerts"), orderBy("at", "desc"), limit(30)), snap => {
@@ -365,6 +412,11 @@ onSnapshot(query(collection(db, "alerts"), orderBy("at", "desc"), limit(30)), sn
     } catch (e) { console.warn(e); }
   }
 }
+$("tlExport").addEventListener("click", exportTimelineCSV);
+$("tlList").addEventListener("click", e => {
+  const b = e.target.closest("[data-row]");
+  if (b) deleteTimelineEntry(+b.dataset.row);
+});
 init().catch(e => { console.warn(e); setConn(false, "שגיאה: " + e.message); $("cfgWarn").hidden = false; });
 </script>
 </body>
