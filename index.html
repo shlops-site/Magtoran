@@ -2814,6 +2814,157 @@ function updateEngineBadge(){
   el.innerHTML = '<span class="badge' + (engineKind === "cdn" ? " gray" : "") + '">' + label + "</span>";
 }
 
+
+/* ---------- Multi-pass OCR input preparation ----------
+   Real phone photos of the roster have watermarks, uneven lighting and angles.
+   A single recognition pass is fragile, so runOCR() recognizes several
+   preprocessed copies with different segmentation modes and merges the results
+   per roster slot (the longest candidate name wins — OCR fragments lose to the
+   full name). */
+
+/* Adaptive (local-mean) binarization using an integral image — removes
+   watermarks and uneven lighting. O(n), phone-friendly. */
+function adaptiveBin(lum, w, h, d){
+  const W1 = w + 1;
+  const integral = new Uint32Array(W1 * (h + 1));
+  for (let y = 0; y < h; y++){
+    let rowSum = 0;
+    const rowOff = y * w, intRow = (y + 1) * W1, intPrev = y * W1;
+    for (let x = 0; x < w; x++){
+      rowSum += lum[rowOff + x];
+      integral[intRow + x + 1] = integral[intPrev + x + 1] + rowSum;
+    }
+  }
+  const B = Math.max(15, Math.round(w / 40));
+  const off = 12;
+  for (let y = 0; y < h; y++){
+    const y1 = Math.max(0, y - B), y2 = Math.min(h - 1, y + B);
+    const r1 = y1 * W1, r2 = (y2 + 1) * W1;
+    for (let x = 0; x < w; x++){
+      const x1 = Math.max(0, x - B), x2 = Math.min(w - 1, x + B);
+      const sum = integral[r2 + x2 + 1] - integral[r1 + x2 + 1] - integral[r2 + x1] + integral[r1 + x1];
+      const n = (y2 - y1 + 1) * (x2 - x1 + 1);
+      const v = lum[y * w + x] > (sum / n) - off ? 255 : 0;
+      const i = (y * w + x) * 4;
+      d[i] = d[i + 1] = d[i + 2] = v;
+    }
+  }
+}
+
+/* Preprocess the scanned photo into a canvas.
+   mode: "stretch"      — grayscale + contrast stretch (the classic prep)
+         "stretchBin"   — stretch + adaptive binarization (kills watermarks)
+         "downStretch"  — x0.5 downscale of big photos + stretch (the LSTM sweet
+                          spot for glyph height — big phone photos read much better)
+         "upStretchBin" — x2 upscale + stretch + binarization (extra detail) */
+function prepCanvas(img, mode){
+  let scale = Math.min(1, 1700 / img.naturalWidth);
+  if (img.naturalWidth < 900) scale = 2;
+  if (mode === "upStretchBin" && img.naturalWidth < 1400) scale = 2;
+  if (mode === "downStretch"){
+    scale = img.naturalWidth >= 800 ? 0.5 : scale;
+    scale = Math.max(scale, 400 / img.naturalWidth);
+  }
+  const w = Math.max(1, Math.round(img.naturalWidth * scale));
+  const h = Math.max(1, Math.round(img.naturalHeight * scale));
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const ctx = c.getContext("2d", { willReadFrequently: true });
+  if (!ctx) return img;
+  ctx.drawImage(img, 0, 0, w, h);
+  try {
+    const id = ctx.getImageData(0, 0, w, h), d = id.data;
+    const lum = new Uint8ClampedArray(w * h);
+    for (let i = 0, p = 0; i < d.length; i += 4, p++) lum[p] = (0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2]) | 0;
+    const hist = new Uint32Array(256);
+    for (let p = 0; p < lum.length; p++) hist[lum[p]]++;
+    const total = lum.length;
+    let acc = 0, lo = 0, hi = 255;
+    for (let v = 0; v < 256; v++){ acc += hist[v]; if (acc >= total * 0.02){ lo = v; break; } }
+    acc = 0;
+    for (let v = 255; v >= 0; v--){ acc += hist[v]; if (acc >= total * 0.02){ hi = v; break; } }
+    if (hi <= lo){ lo = 0; hi = 255; }
+    const gain = 255 / (hi - lo);
+    for (let p = 0; p < lum.length; p++){
+      let v = (lum[p] - lo) * gain;
+      v = v < 0 ? 0 : v > 255 ? 255 : v;
+      const i = p * 4; d[i] = d[i+1] = d[i+2] = v;
+    }
+    if (mode !== "stretch") adaptiveBin(lum, w, h, d);
+    ctx.putImageData(id, 0, 0);
+  } catch (e) { /* no pixel access — the original image is used as-is */ }
+  return c;
+}
+
+/* Merge several parse results into one: per roster slot the longest candidate
+   name wins (an OCR fragment loses to the full name); unmatched names are
+   unioned; contacts are merged by key. Much more stable across photos. */
+function mergeParsed(list){
+  const slots = new Map();    // roster index -> Map(squashedName -> {name, count})
+  const extras = new Map();   // squashedName -> {name, count}
+  const contacts = new Map();
+  const unmatched = [], seenU = new Set();
+  const bump = (map, key, name) => {
+    const cur = map.get(key);
+    if (cur){ cur.count++; if (name.length > cur.name.length) cur.name = name; }
+    else map.set(key, { name: name, count: 1 });
+  };
+  // strip dangling OCR garbage from a merged name (e.g. "ירין -ל" -> "ירין")
+  const tidy = n => clean(n)
+    .replace(/\s*[-\u2013\u2014:.,;]+\s*[\u05d0-\u05ea]?$/u, "")
+    .replace(/^[-\u2013\u2014:.,;]+\s*/u, "")
+    .trim();
+  (list || []).forEach(p => {
+    (p.rows || []).forEach(r => {
+      const name = tidy(r.name || "");
+      if (!name || name.length > 30) return;
+      const key = name.replace(/\s+/g, "");
+      if (r.index >= 0){
+        if (!slots.has(r.index)) slots.set(r.index, new Map());
+        bump(slots.get(r.index), key, name);
+      } else bump(extras, key, name);
+    });
+    (p.contacts || []).forEach(c => {
+      if (!c || !c.key) return;
+      if (!contacts.has(c.key)) contacts.set(c.key, { key: c.key, label: c.label || "", phones: new Map() });
+      const cur = contacts.get(c.key);
+      if (c.label && !cur.label) cur.label = c.label;
+      const ph = String(c.phone || "");
+      if (ph) cur.phones.set(ph, (cur.phones.get(ph) || 0) + 1);
+    });
+    (p.unmatched || []).forEach(u => {
+      const raw = clean((u && u.raw) || "");
+      if (!raw || raw.length > 60) return;
+      const key = pSquash(raw);
+      if (!seenU.has(key)){ seenU.add(key); unmatched.push({ raw: raw }); }
+    });
+  });
+  // per slot: the name most passes agree on wins; ties -> the longest form
+  const bestOf = (map) => {
+    let best = null;
+    map.forEach(v => {
+      const vl = v.name.replace(/\s+/g, "").length, bl = best ? best.name.replace(/\s+/g, "").length : 0;
+      if (!best || v.count > best.count || (v.count === best.count && vl > bl)) best = v;
+    });
+    return best ? best.name : "";
+  };
+  const rows = [];
+  slots.forEach((map, index) => {
+    const name = bestOf(map);
+    if (name) rows.push({ index: index, name: name, raw: "", merged: true });
+  });
+  extras.forEach(map => {
+    const name = bestOf(map);
+    if (name) rows.push({ index: -1, name: name, raw: "", merged: true });
+  });
+  const contactRows = [...contacts.values()].map(cur => {
+    let phone = "", bestN = 0;
+    cur.phones.forEach((n, ph) => {
+      if (n > bestN || (n === bestN && ph.length > phone.length)){ phone = ph; bestN = n; }
+    });
+    return { key: cur.key, label: cur.label, phone: phone };
+  });
+  return { rows: rows, contacts: contactRows, unmatched: unmatched, mergedFrom: (list || []).length };
+}
 async function runOCR(){
   if (!scanImgEl){ toast("צריך לבחור תמונה קודם"); return; }
   if (ocrBusy) return;
@@ -2822,12 +2973,27 @@ async function runOCR(){
   if (btn) btn.classList.add("busy");
   try {
     const w = await ensureWorker();
-    const src = document.getElementById("prepChk").checked ? preprocessImage(scanImgEl) : scanImgEl;
-    setOcrStatus("מזהה טקסט…");
-    const { data } = await w.recognize(src);
+    const doPrep = document.getElementById("prepChk").checked;
+    // several preprocessed copies + different segmentation modes, then merged —
+    // far more reliable on real phone photos than a single pass
+    const passes = doPrep
+      ? [ { src: prepCanvas(scanImgEl, "stretch"), psm: "6" },
+          { src: prepCanvas(scanImgEl, "downStretch"), psm: "11" },
+          { src: prepCanvas(scanImgEl, "stretchBin"), psm: "11" } ]
+      : [ { src: scanImgEl, psm: "6" } ];
+    const parsedList = [];
+    let bestConf = 0;
+    for (let k = 0; k < passes.length; k++){
+      setOcrStatus("מזהה טקסט… (" + (k + 1) + "/" + passes.length + ")");
+      setOcrProgress(0.1 + 0.85 * (k / passes.length));
+      await w.setParameters({ tessedit_pageseg_mode: passes[k].psm, preserve_interword_spaces: "1" });
+      const { data } = await w.recognize(passes[k].src);
+      if (data.confidence > bestConf) bestConf = data.confidence;
+      parsedList.push(parseDuty(data.text, state.roster, state.contacts));
+    }
     setOcrProgress(1);
-    setOcrStatus("הזיהוי הסתיים (" + Math.round(data.confidence || 0) + "% ביטחון) — בדקו ותקנו למטה.");
-    handleParsed(parseDuty(data.text, state.roster, state.contacts), "image");
+    setOcrStatus("הזיהוי הסתיים (" + Math.round(bestConf || 0) + "% ביטחון · " + passes.length + " ניסיונות) — בדקו ותקנו למטה.");
+    handleParsed(mergeParsed(parsedList), "image");
   } catch (err){
     setOcrProgress(null);
     setOcrStatus("");

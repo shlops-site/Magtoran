@@ -36,6 +36,11 @@
 5. **Optional:** after scanning the roster photo, the app can ask "is the fire
    system back in business?" and mark it fixed for everyone with one tap.
    **Off by default** — see `window.SYNC_OPTIONS` in `firebase-config.js`.
+7. **The roster-photo OCR is much more reliable.** The scan now runs three
+   recognition passes (classic prep, downscaled to the optimal text size, and
+   watermark-removing binarization) with different segmentation modes, and
+   merges the results — on a real phone photo of the roster this went from
+   ~2 of 7 names recognized to 7 of 7.
 6. **The fault timeline is now an admin-only archive.** It no longer appears
    inside the app (the data still syncs in the background). The admin panel
    shows it as two lists — **open faults** and **archive (fixed)**, newest at

@@ -1,20 +1,21 @@
-WHAT TO DO WITH THIS ZIP (GitHub Pages) — UPDATE v5
+WHAT TO DO WITH THIS ZIP (GitHub Pages) — UPDATE v6
 ====================================================
-What changed since the last update — the fault timeline in the ADMIN PANEL
-(it does not appear in the app at all):
-  - The timeline is now FULLY EDITABLE by the admin: every point (open or
-    archived) has an edit button (✏️) to change its note, location, start
-    date, and fix date. Edits sync to every device automatically.
-  - Everything else from the last update stays: two lists (open faults /
-    archive of fixed ones), fixed faults show when they started, when they
-    were fixed, and HOW LONG they took; each list shows 5 entries with a
-    "see more" button; newest at the top; archived points can be deleted
-    (🗑) and the whole timeline exported to CSV (💾).
+What changed since the last update:
+  - THE ROSTER-PHOTO OCR (scan) IS MUCH BETTER: it now runs 3 recognition
+    passes (classic, downscaled to the optimal text size, and a watermark-
+    removing binarization) and merges the results. On a real phone photo of
+    the roster this went from about 2 of 7 names recognized to 7 of 7.
+    Tip: you can also add your team's names under "ניהול שמות לזיהוי" in the
+    scan tab — the app then uses them to fix OCR mistakes.
+  - Everything from the previous updates stays: the editable two-section
+    timeline archive in the admin panel (see-more after 5, durations, edit,
+    delete, export), every-session sync, server-time ordering, and phones
+    updating themselves automatically.
 
 REPLACE these two files in your repo (they already exist there):
-  - index.html
-  - sw.js                   (CHANGED too — new offline-cache name, so every
-                            phone downloads the new sync.js automatically)
+  - index.html                (CHANGED — the improved OCR engine pipeline)
+  - sw.js                     (CHANGED — new offline-cache name, so every
+                              phone downloads the new index.html automatically)
 
 ADD these six files (new or updated):
   - sync.js                   (updated - the sync engine)
@@ -34,28 +35,20 @@ GitHub Pages steps:
   4. Repo -> Settings -> Pages -> Source: "Deploy from a branch" ->
      Branch: main -> Folder: / (root) -> Save.
   5. Wait ~1 minute, open the site URL.
-  6. Phones pick up the new sync.js by themselves the next time they open the
+  6. Phones pick up the new files by themselves the next time they open the
      app (the offline-cache name changed). If one still misbehaves: open the
      app and press Ctrl+Shift+R once.
 
-BEFORE or right after uploading (Firebase console, project "mag-toran"):
-  1. Enable Firestore (if not yet): console.firebase.google.com/project/mag-toran/firestore
+Firebase console (project "mag-toran") — only if not done yet:
+  1. Enable Firestore: console.firebase.google.com/project/mag-toran/firestore
      -> Create database -> location me-west1 (Tel Aviv) -> production mode.
-  2. UPDATE the security rules: paste the rules from SETUP.md (step 3) into
-     Firestore -> Rules again — they now also cover the "faultTimeline"
-     collection (without this the timeline will not sync).
-  3. Get the VAPID key: console -> Cloud Messaging -> Web Push certificates
-     -> Generate key pair -> paste into firebase-config.js (replace
-     REPLACE-ME-WITH-YOUR-VAPID-KEY). Only needed for push notifications.
+  2. Paste the security rules from SETUP.md (step 3) into Firestore -> Rules
+     (they cover the "faultTimeline" collection that feeds the admin archive).
+  3. VAPID key (only for push notifications): console -> Cloud Messaging ->
+     Web Push certificates -> Generate key pair -> paste into
+     firebase-config.js (replace REPLACE-ME-WITH-YOUR-VAPID-KEY).
 
-CLEANING UP / FIXING YOUR TEST DATA:
-  - The app no longer shows the timeline at all — the screen is clean.
-  - Open admin.html -> the timeline has two lists: open faults and archive.
-  - To fix a mistake in a point (wrong note/date): press its ✏️ button and
-    edit it — the fix syncs to every device.
-  - To remove a test point: press its 🗑 button (archived/fixed points only).
-  - 💾 exports the whole timeline to CSV if you want a copy first.
-
-Then test: open the app on two phones. Mark a car as defective on one — it
-appears on the other within a few seconds and STAYS until someone marks it
-fixed. Open admin.html for the admin view + the editable timeline archive.
+THEN TEST THE SCAN: open the app -> scan tab -> upload a photo of the duty
+roster -> the names should fill in automatically (check & fix, then apply).
+Send me 2-3 more photos (different phones / angles / lighting) and I will
+keep tuning the recognition.
