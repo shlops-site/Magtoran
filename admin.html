@@ -99,12 +99,15 @@
   </div>
 
     <div class="card">
-    <h2>🗄️ ציר זמן תקלות (ארכיון)</h2>
+    <h2>🗄️ ציר זמן תקלות</h2>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">
       <button type="button" id="tlExport">💾 ייצוא CSV</button>
       <span class="meta" id="tlCount"></span>
     </div>
-    <div id="tlList" class="mut">אין תקלות</div>
+    <div style="font-weight:700;margin:6px 0 4px">⚠️ תקלות פתוחות</div>
+    <div id="tlOpen" class="mut">אין תקלות פתוחות</div>
+    <div style="font-weight:700;margin:12px 0 4px">🗄️ ארכיון — תוקן</div>
+    <div id="tlArch" class="mut">הארכיון ריק</div>
   </div>
 
 <div class="card">
@@ -280,32 +283,88 @@ try {
   });
 } catch (e) {}
 
-let tlDocs = {};   // docId -> { name, entries } — the shared timeline (live)
-let tlRows = [];     // rendered rows -> { docId, name, ev } (for the delete buttons)
+let tlDocs = {};        // docId -> { name, entries } — the shared timeline (live)
+let tlCurrentDocs = [];   // last rendered docs (for the see-more toggle)
+let tlRows = [];          // all rendered rows -> { docId, name, ev } (for the delete buttons)
+let tlExpanded = { open: false, arch: false };
+const TL_PAGE = 5;        // entries shown before the "see more" button
+
+/* how long a fault lasted: from when it started until it was fixed */
+function durationText(at, closedAt) {
+  const d1 = new Date(String(at || "") + "T12:00:00");
+  const d2 = new Date(String(closedAt || at || "") + "T12:00:00");
+  if (isNaN(d1) || isNaN(d2)) return "";
+  const days = Math.max(0, Math.round((d2 - d1) / 86400000));
+  if (days <= 0) return "באותו יום";   // fixed the same day
+  if (days === 1) return "יום אחד";    // one day
+  return days + " ימים";
+}
 
 function renderTimeline(docs) {
   tlRows = [];
-  const rows = [];
-  docs.forEach(({ docId, name, entries }) => (entries || []).forEach(ev => rows.push({ docId, name, ev })));
-  rows.sort((a, b) => {
-    const ao = a.ev.status === "open" ? 0 : 1, bo = b.ev.status === "open" ? 0 : 1;
-    if (ao !== bo) return ao - bo;
-    return String(b.ev.at || "").localeCompare(String(a.ev.at || ""));
-  });
-  const box = $("tlList");
-  $("tlCount").textContent = rows.length ? rows.length + " רשומות בארכיון" : "";
-  if (!rows.length) { box.innerHTML = '<div class="mut">אין תקלות</div>'; return; }
-  box.innerHTML = rows.slice(0, 100).map((r) => {
-    const open = r.ev.status === "open";
-    const chip = open ? '<span class="chip bad">⚠️ פתוחה</span>' : '<span class="chip ok">✅ תקין</span>';
+  const open = [], arch = [];
+  docs.forEach(({ docId, name, entries }) => (entries || []).forEach(ev => {
+    if (ev && ev.status === "open") open.push({ docId, name, ev });
+    else if (ev) arch.push({ docId, name, ev });
+  }));
+  open.sort((a, b) => String(b.ev.at || "").localeCompare(String(a.ev.at || "")));
+  arch.sort((a, b) => String(b.ev.closedAt || b.ev.at || "").localeCompare(String(a.ev.closedAt || a.ev.at || "")));
+  const total = open.length + arch.length;
+  $("tlCount").textContent = total
+    ? total + " רשומות (" + open.length + " פתוחה \u00b7 " + arch.length + " בארכיון)"
+    : "";
+
+  function rowHtml(r, isOpen) {
+    const chip = isOpen ? '<span class="chip bad">⚠️ פתוחה</span>' : '<span class="chip ok">✅ תקין</span>';
     const where = r.ev.where === "במיקום אחר" ? (r.ev.whereText || "במיקום אחר") : (r.ev.where || "");
-    const note = [esc(r.ev.note || ""), esc(where)].filter(Boolean).join(" · ");
-    const dates = [esc(r.ev.at || ""), r.ev.closedAt ? "→ " + esc(r.ev.closedAt) : ""].filter(Boolean).join(" ");
-    // archived (closed) points can be deleted; open faults are still live — mark the vehicle fixed first
-    const del = open ? "" : `<button type="button" class="danger" data-row="${tlRows.length}" title="מחק מהרכיון" style="padding:2px 8px">🗑️</button>`;
+    const note = [esc(r.ev.note || ""), esc(where)].filter(Boolean).join(" \u00b7 ");
+    let dates;
+    if (isOpen) {
+      dates = esc(r.ev.at || "");   // when it started
+    } else {
+      const dur = durationText(r.ev.at, r.ev.closedAt);
+      dates = [esc(r.ev.at || ""), r.ev.closedAt ? "\u2192 " + esc(r.ev.closedAt) : ""].filter(Boolean).join(" ")
+        + (dur ? " \u00b7 " + esc(dur) : "");   // when it started → when fixed · how long it took
+    }
+    const idx = tlRows.length;
+    const isEditing = tlEditing === idx;
+    const editBtn = `<button type="button" class="tlEdit" data-row="${idx}" title="ערוך" style="padding:2px 8px">✏️</button>`;
+    // archived (fixed) points can be deleted; open faults are still live — mark the vehicle fixed first
+    const del = isOpen ? "" : `<button type="button" class="danger" data-row="${idx}" title="מחק מהרכיון" style="padding:2px 8px">🗑️</button>`;
+    let form = "";
+    if (isEditing) {
+      const w = r.ev.where || "";
+      const wOpts = ["בגףרכב", "במיקום אחר"].map(v => `<option value="${esc(v)}"${w === v ? " selected" : ""}>${esc(v)}</option>`).join("")
+        + (w && w !== "בגףרכב" && w !== "במיקום אחר" ? `<option value="${esc(w)}" selected>${esc(w)}</option>` : "");
+      form = `<div class="form on">
+        <input data-tlnote placeholder="הערה" value="${esc(r.ev.note || "")}" style="min-width:160px">
+        <select data-tlwhere>${wOpts}</select>
+        <input data-tlwheretext placeholder="איקה מיקום?" value="${esc(r.ev.whereText || "")}">
+        <span class="meta">תאריך פתיחה</span><input type="date" data-tlat value="${esc(r.ev.at || "")}">
+        ${isOpen ? "" : `<span class="meta">תאריך תיקון</span><input type="date" data-tlclosed value="${esc(r.ev.closedAt || "")}">`}
+        <button class="primary" data-tlsave data-row="${idx}">שמור</button>
+        <button data-tlcancel>ביטול</button>
+      </div>`;
+    }
     tlRows.push(r);
-    return `<div class="alert"><b>${esc(r.name)}</b> ${chip} <span class="meta">${dates}</span>${note ? "<br>" + note : ""}${del}</div>`;
-  }).join("");
+    return `<div class="alert"><b>${esc(r.name)}</b> ${chip} <span class="meta">${dates}</span>${note ? "<br>" + note : ""}${editBtn}${del}${form}</div>`;
+  }
+
+  function renderList(list, boxId, kind, emptyText) {
+    const box = $(boxId);
+    if (!list.length) { box.innerHTML = '<div class="mut">' + emptyText + '</div>'; return; }
+    const expanded = tlExpanded[kind];
+    const shown = expanded ? list : list.slice(0, TL_PAGE);
+    let html = shown.map(r => rowHtml(r, kind === "open")).join("");
+    if (list.length > TL_PAGE) {
+      const more = expanded ? "ארא פחסוו" : "ארא עוד (" + (list.length - TL_PAGE) + ")";
+      html += `<div style="margin-top:6px"><button type="button" class="tlMore" data-list="${kind}" style="background:none;border:0;padding:4px 0;color:var(--green);font:inherit;font-weight:700;cursor:pointer">${more}</button></div>`;
+    }
+    box.innerHTML = html;
+  }
+
+  renderList(open, "tlOpen", "open", "אין תקלות פתוחות");
+  renderList(arch, "tlArch", "arch", "הארכיון ריק");
 }
 
 async function deleteTimelineEntry(rowIdx) {
@@ -320,15 +379,42 @@ async function deleteTimelineEntry(rowIdx) {
   } catch (e) { console.warn(e); toast("❌ המחיקה נכשלה"); }
 }
 
+let tlEditing = null;   // row index currently being edited (null = none)
+
+async function saveTimelineEntry(btn) {
+  const row = tlRows[+btn.dataset.row];
+  if (!row || !setTimelineDoc) return;
+  const doc = tlDocs[row.docId];
+  if (!doc) return;
+  const form = btn.closest(".alert");
+  const ev = row.ev;
+  const edited = {
+    at: (form.querySelector("[data-tlat]") || {}).value || ev.at || "",
+    status: ev.status,
+    note: norm((form.querySelector("[data-tlnote]") || {}).value || ""),
+    where: (form.querySelector("[data-tlwhere]") || {}).value || "",
+    whereText: norm((form.querySelector("[data-tlwheretext]") || {}).value || ""),
+    source: ev.source || "mark"
+  };
+  if (ev.status !== "open") edited.closedAt = (form.querySelector("[data-tlclosed]") || {}).value || ev.closedAt || "";
+  const entries = (doc.entries || []).map(e => (e === ev ? edited : e));
+  tlEditing = null;
+  try {
+    await setTimelineDoc(row.docId, { name: doc.name, entries: entries, at: serverTsFn ? serverTsFn() : nowISO() });
+    toast("✅ נשמר");
+  } catch (e) { console.warn(e); toast("❌ השמירה נכשלה"); }
+}
+
 function exportTimelineCSV() {
-  const header = ["רכב / מערכת", "סטטוס", "נפתח", "נסגר", "הערה", "מיקום"];
+  const header = ["רכב / מערכת", "סטטוס", "נפתח", "נסגר", "משך", "הערה", "מיקום"];
   const rows = [header];
   Object.keys(tlDocs).sort().forEach(id => {
     const doc = tlDocs[id];
     (doc.entries || []).forEach(e => {
       const status = e.status === "open" ? "פתוחה" : "תקין";
       const where = e.where === "במיקום אחר" ? (e.whereText || "במיקום אחר") : (e.where || "");
-      rows.push([doc.name || id, status, e.at || "", e.closedAt || "", e.note || "", where]);
+      const dur = e.status === "open" ? "" : durationText(e.at, e.closedAt);
+      rows.push([doc.name || id, status, e.at || "", e.closedAt || "", dur, e.note || "", where]);
     });
   });
   const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
@@ -396,7 +482,8 @@ async function init() {
       const data = d.data() || {};
       tlDocs[String(d.id)] = { name: data.name || vehName(String(d.id)), entries: Array.isArray(data.entries) ? data.entries : [] };
     });
-    renderTimeline(Object.keys(tlDocs).map(id => Object.assign({ docId: id }, tlDocs[id])));
+    tlCurrentDocs = Object.keys(tlDocs).map(id => Object.assign({ docId: id }, tlDocs[id]));
+    renderTimeline(tlCurrentDocs);
   }, e => console.warn(e));
 
 onSnapshot(query(collection(db, "alerts"), orderBy("at", "desc"), limit(30)), snap => {
@@ -413,10 +500,20 @@ onSnapshot(query(collection(db, "alerts"), orderBy("at", "desc"), limit(30)), sn
   }
 }
 $("tlExport").addEventListener("click", exportTimelineCSV);
-$("tlList").addEventListener("click", e => {
+function tlBoxClick(e) {
+  const more = e.target.closest(".tlMore");
+  if (more) { tlExpanded[more.dataset.list] = !tlExpanded[more.dataset.list]; renderTimeline(tlCurrentDocs); return; }
+  const edit = e.target.closest(".tlEdit");
+  if (edit) { tlEditing = +edit.dataset.row; renderTimeline(tlCurrentDocs); return; }
+  const save = e.target.closest("[data-tlsave]");
+  if (save) { saveTimelineEntry(save); return; }
+  const cancel = e.target.closest("[data-tlcancel]");
+  if (cancel) { tlEditing = null; renderTimeline(tlCurrentDocs); return; }
   const b = e.target.closest("[data-row]");
   if (b) deleteTimelineEntry(+b.dataset.row);
-});
+}
+$("tlOpen").addEventListener("click", tlBoxClick);
+$("tlArch").addEventListener("click", tlBoxClick);
 init().catch(e => { console.warn(e); setConn(false, "שגיאה: " + e.message); $("cfgWarn").hidden = false; });
 </script>
 </body>

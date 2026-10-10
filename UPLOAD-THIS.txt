@@ -1,15 +1,15 @@
-WHAT TO DO WITH THIS ZIP (GitHub Pages) — UPDATE v3 (IMPORTANT)
-===============================================================
-What changed since the last update:
-  - The fault timeline NO LONGER appears inside the app (it was clogging the
-    screen). It is now an ADMIN-ONLY archive in admin.html.
-  - When a car OR the fire alarm system is fixed, that point is archived in
-    the timeline automatically (with the date it was fixed).
-  - The admin panel timeline now has: a DELETE button on every archived
-    (fixed) point, and an EXPORT button that downloads the whole timeline as
-    a CSV file (opens in Excel).
-  - (Previous fixes still included: every session pushes, and changes are
-    ordered by Firestore server time, so wrong phone clocks no longer matter.)
+WHAT TO DO WITH THIS ZIP (GitHub Pages) — UPDATE v5
+====================================================
+What changed since the last update — the fault timeline in the ADMIN PANEL
+(it does not appear in the app at all):
+  - The timeline is now FULLY EDITABLE by the admin: every point (open or
+    archived) has an edit button (✏️) to change its note, location, start
+    date, and fix date. Edits sync to every device automatically.
+  - Everything else from the last update stays: two lists (open faults /
+    archive of fixed ones), fixed faults show when they started, when they
+    were fixed, and HOW LONG they took; each list shows 5 entries with a
+    "see more" button; newest at the top; archived points can be deleted
+    (🗑) and the whole timeline exported to CSV (💾).
 
 REPLACE these two files in your repo (they already exist there):
   - index.html
@@ -18,7 +18,7 @@ REPLACE these two files in your repo (they already exist there):
 
 ADD these six files (new or updated):
   - sync.js                   (updated - the sync engine)
-  - admin.html                (updated - timeline archive: delete + export)
+  - admin.html                (updated - editable two-section timeline archive)
   - firebase-config.js        (your real config - already filled in)
   - firebase-config.example.js
   - SETUP.md                  (updated - read this, it is your checklist)
@@ -48,13 +48,14 @@ BEFORE or right after uploading (Firebase console, project "mag-toran"):
      -> Generate key pair -> paste into firebase-config.js (replace
      REPLACE-ME-WITH-YOUR-VAPID-KEY). Only needed for push notifications.
 
-CLEANING UP YOUR TEST DATA (the entries from your testing):
+CLEANING UP / FIXING YOUR TEST DATA:
   - The app no longer shows the timeline at all — the screen is clean.
-  - Open admin.html -> in the timeline card, mark the test vehicles as fixed
-    (✔️ סמן תקין in the vehicles list) — their points move to the archive.
-  - Then delete the archived test points with the 🗑 button next to each one.
-  - 💾 exports the whole timeline to CSV if you want to keep a copy first.
+  - Open admin.html -> the timeline has two lists: open faults and archive.
+  - To fix a mistake in a point (wrong note/date): press its ✏️ button and
+    edit it — the fix syncs to every device.
+  - To remove a test point: press its 🗑 button (archived/fixed points only).
+  - 💾 exports the whole timeline to CSV if you want a copy first.
 
 Then test: open the app on two phones. Mark a car as defective on one — it
 appears on the other within a few seconds and STAYS until someone marks it
-fixed. Open admin.html for the admin view + the timeline archive.
+fixed. Open admin.html for the admin view + the editable timeline archive.

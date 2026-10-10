@@ -38,9 +38,12 @@
    **Off by default** — see `window.SYNC_OPTIONS` in `firebase-config.js`.
 6. **The fault timeline is now an admin-only archive.** It no longer appears
    inside the app (the data still syncs in the background). The admin panel
-   shows the full timeline, archives every fixed fault — cars **and** the
-   fire system — and lets you **delete** archived points or **export** the
-   whole timeline to CSV (Excel).
+   shows it as two lists — **open faults** and **archive (fixed)**, newest at
+   the top — each showing 5 entries with a "see more" button. Every fixed
+   fault — cars **and** the fire system — moves to the archive with **when it
+   started, when it was fixed, and how long it took**. The timeline is fully
+   editable by the admin: **edit** any point (✏️ — note, location, dates),
+   **delete** archived points (🗑), or **export** everything to CSV (Excel).
 
 Your app (צ׳ק ליסט מ״ג תורן) now syncs two things **live across every device**:
 
@@ -208,11 +211,14 @@ cross-site requests (CORS) for you.
    off (no config); red (סנכרון: שגיאה) means the connection to Firebase
    failed (the app still works offline).
 5. **The timeline is an archive (admin panel only).** When a car or the fire
-   system is fixed, that point is archived in the timeline automatically.
-   In `admin.html` you can delete archived points (the 🗑 button on closed
-   rows) and export everything to CSV (the 💾 button) — e.g. to print or keep
-   a record. Open (not-yet-fixed) faults cannot be deleted from the timeline;
-   mark the vehicle as fixed first.
+   system is fixed, that point moves to the archive list automatically, showing
+   when it started, when it was fixed, and how long it took. Both lists are
+   sorted newest-first and show 5 entries with a "see more" button to see
+   everything. In `admin.html` the timeline is fully editable: **edit** any
+   point with the ✏️ button (note, location, start date, fix date), **delete**
+   archived points (the 🗑 button), and **export** everything to CSV (the 💾
+   button) — e.g. to print or keep a record. Open (not-yet-fixed) faults
+   cannot be deleted from the timeline; mark the vehicle as fixed first.
 4. Mark the fire system תקול (from the app or the admin page) → every device
    updates instantly; the admin page shows an alert.
 
